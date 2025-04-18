@@ -3,6 +3,7 @@ import {
   ConnectButton
 } from "@rainbow-me/rainbowkit";
 import StarBorder from "@/components/ui/starBorder";
+import { Button } from "@/components/ui/button";
 
 
 const Custombutton = () => {
@@ -40,13 +41,13 @@ const Custombutton = () => {
               if (!connected) {
                 return (
                   <>
-                    <button
+                    <Button
                       className="w-fit p-3 px-8 bg-gray-600 hover:bg-gray-700"
                       onClick={openConnectModal}
                       type="button"
                     >
                       Connect Wallet
-                    </button>
+                    </Button>
                   </>
                 );
               }
@@ -54,20 +55,20 @@ const Custombutton = () => {
               if (chain.unsupported) {
                 return (
                   <>
-                    <button
+                    <Button
                       className=" w-fit p-3 px-8 bg-red-500 hover:bg-red-600"
                       onClick={openChainModal}
                       type="button"
                     >
                       Wrong network
-                    </button>
+                    </Button>
                   </>
                 );
               }
 
               return (
                 <div className="">
-                  <button
+                  <Button
                     className="w-fit p-3 px-8 bg-gray-600 hover:bg-gray-700"
                     onClick={openAccountModal}
                     type="button"
@@ -76,7 +77,7 @@ const Custombutton = () => {
                     {account.displayBalance
                       ? ` (${account.displayBalance})`
                       : ""}
-                  </button>
+                  </Button>
                 </div>
               );
             })()}
