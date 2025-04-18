@@ -9,7 +9,7 @@ export function MainNav() {
     const pathname = usePathname()
 
     return (
-        <header className="fixed top-0 w-full outfit-font border-b bg-background/95 backdrop-blur bg-transparent z-50 outfit-font">
+        <header className="fixed top-0 w-full outfit-font bg-background/95 backdrop-blur bg-transparent z-50 outfit-font">
             <div className="container  flex h-16 px-32 text-white">
                 <nav className="flex w-full justify-between items-center space-x-6">
                     <Link href="/" className="font-bold text-xl">
