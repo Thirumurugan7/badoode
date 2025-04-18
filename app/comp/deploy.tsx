@@ -101,10 +101,22 @@ export default function DeployPage() {
       const tx = await vanityDeployer.deployWithSalt(salt);
       const receipt = await tx.wait();
 
-      console.log("Receipt: " + receipt);
+      console.log("Receipt:", JSON.stringify(receipt, null, 2));
       
-      const deployedEvent = receipt.events.find(e => e.event === "TargetContractDeployed");
-      const tokenAddress = deployedEvent.args.deployedAddress;
+      // Fix for TypeScript error - properly type the event
+      const deployedEvent = receipt.events?.find((e: any) => {
+        // Look for the event with the correct topic signature
+        return e.topics && e.topics[0] === "0x5c2cf7b115a5d943fa11d730c947a439f2895d25576349163d4c5e7d3c3f2abc";
+      });
+      
+      if (!deployedEvent) {
+        throw new Error("Deployment event not found in transaction receipt");
+      }
+      
+      // Parse the data to extract the deployed address
+      // The address is in the first 32 bytes of the data
+      const data = deployedEvent.data;
+      const tokenAddress = "0x" + data.slice(26, 66); // Extract the address from the data
       
       console.log("\n✅ SUCCESS! Token deployed with vanity address:");
       console.log(`   ${tokenAddress}`);

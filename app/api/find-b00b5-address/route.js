@@ -3,6 +3,30 @@ import fs from "fs";
 import path from "path";
 import { NextResponse } from "next/server";
 
+// Keep track of used salts
+const USED_SALTS_FILE = path.join(process.cwd(), "used-salts.json");
+
+function getUsedSalts() {
+  try {
+    if (fs.existsSync(USED_SALTS_FILE)) {
+      return new Set(JSON.parse(fs.readFileSync(USED_SALTS_FILE, 'utf8')));
+    }
+  } catch (err) {
+    console.error("Error reading used salts:", err);
+  }
+  return new Set();
+}
+
+function addUsedSalt(salt) {
+  try {
+    const usedSalts = getUsedSalts();
+    usedSalts.add(salt);
+    fs.writeFileSync(USED_SALTS_FILE, JSON.stringify(Array.from(usedSalts)));
+  } catch (err) {
+    console.error("Error saving used salt:", err);
+  }
+}
+
 // API route handler for App Router
 export async function POST(request) {
   try {
@@ -10,8 +34,12 @@ export async function POST(request) {
     const body = await request.json();
     const { targetSuffix = "b00b5", startSalt = 0, endSalt = 100000 } = body;
     
+    // Get used salts
+    const usedSalts = getUsedSalts();
+    
     // Log the search parameters
     console.log(`Searching for address ending with ${targetSuffix} (salts ${startSalt}-${endSalt})`);
+    console.log(`Excluding ${usedSalts.size} previously used salts`);
     
     // Get contract info
     const contractInfo = await getContractInfo();
@@ -21,6 +49,11 @@ export async function POST(request) {
     let count = 0;
     
     for (let salt = startSalt; salt < endSalt; salt++) {
+      // Skip if salt was already used
+      if (usedSalts.has(salt.toString())) {
+        continue;
+      }
+
       // Convert salt to hex format padded to 32 bytes
       const saltHex = ethers.utils.hexZeroPad(ethers.utils.hexlify(salt), 32);
       
@@ -36,6 +69,9 @@ export async function POST(request) {
         // Found a match!
         console.log(`Found matching salt: ${salt}`);
         console.log(`Predicted address: ${address}`);
+        
+        // Add to used salts before saving
+        addUsedSalt(salt.toString());
         
         // Save the salt information
         const saltInfo = {

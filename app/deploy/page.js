@@ -96,33 +96,94 @@ export default function DeployPage() {
         signer
       );
       
-      console.log("Deploying with salt: 274859");
-      const tx = await vanityDeployer.deployWithSalt(274859);
-      const receipt = await tx.wait();
+      // Add gas estimation with override parameters
+      const salt = 274859;
+      console.log("Deploying with salt:", salt);
       
-      const deployedEvent = receipt.events.find(e => e.event === "TargetContractDeployed");
-      const tokenAddress = deployedEvent.args.deployedAddress;
-      
-      console.log("\n✅ SUCCESS! Token deployed with vanity address:");
-      console.log(`   ${tokenAddress}`);
-      
-      const winkToken = new ethers.Contract(tokenAddress, WinkTokenABI, signer);
-      
-      const name = await winkToken.name();
-      const symbol = await winkToken.symbol();
-      const decimals = await winkToken.decimals();
-      const totalSupply = await winkToken.totalSupply();
-      const ownerBalance = await winkToken.balanceOf(address);
-      
-      console.log("\nToken Details:");
-      console.log(`- Name: ${name}`);
-      console.log(`- Symbol: ${symbol}`);
-      console.log(`- Decimals: ${decimals}`);
-      console.log(`- Total Supply: ${ethers.utils.formatUnits(totalSupply, decimals)}`);
-      console.log(`- Owner Balance: ${ethers.utils.formatUnits(ownerBalance, decimals)}`);
+      // Try to estimate gas first
+      try {
+        const gasEstimate = await vanityDeployer.estimateGas.deployWithSalt(salt);
+        console.log("Estimated gas:", gasEstimate.toString());
+        
+        // Add 20% buffer to gas estimate
+        const gasLimit = gasEstimate.mul(120).div(100);
+        
+        const tx = await vanityDeployer.deployWithSalt(salt, {
+          gasLimit: gasLimit,
+        });
+        
+        console.log("Transaction hash:", tx.hash);
+        const receipt = await tx.wait();
+        
+        const deployedEvent = receipt.events.find(e => e.event === "TargetContractDeployed");
+        if (!deployedEvent) {
+          throw new Error("Deployment event not found in transaction receipt");
+        }
+        
+        const tokenAddress = deployedEvent.args.deployedAddress;
+        console.log("\n✅ SUCCESS! Token deployed with vanity address:");
+        console.log(`   ${tokenAddress}`);
+        
+        const winkToken = new ethers.Contract(tokenAddress, WinkTokenABI, signer);
+        
+        const name = await winkToken.name();
+        const symbol = await winkToken.symbol();
+        const decimals = await winkToken.decimals();
+        const totalSupply = await winkToken.totalSupply();
+        const ownerBalance = await winkToken.balanceOf(address);
+        
+        console.log("\nToken Details:");
+        console.log(`- Name: ${name}`);
+        console.log(`- Symbol: ${symbol}`);
+        console.log(`- Decimals: ${decimals}`);
+        console.log(`- Total Supply: ${ethers.utils.formatUnits(totalSupply, decimals)}`);
+        console.log(`- Owner Balance: ${ethers.utils.formatUnits(ownerBalance, decimals)}`);
+        
+      } catch (estimateError) {
+        console.error("Gas estimation failed:", estimateError);
+        
+        // Fallback to manual gas limit if estimation fails
+        console.log("Attempting deployment with manual gas limit...");
+        const tx = await vanityDeployer.deployWithSalt(salt, {
+          gasLimit: 3000000, // Manual gas limit
+        });
+        
+        console.log("Transaction hash:", tx.hash);
+        const receipt = await tx.wait();
+        
+        const deployedEvent = receipt.events.find(e => e.event === "TargetContractDeployed");
+        if (!deployedEvent) {
+          throw new Error("Deployment event not found in transaction receipt");
+        }
+        
+        const tokenAddress = deployedEvent.args.deployedAddress;
+        console.log("\n✅ SUCCESS! Token deployed with vanity address:");
+        console.log(`   ${tokenAddress}`);
+        
+        const winkToken = new ethers.Contract(tokenAddress, WinkTokenABI, signer);
+        
+        const name = await winkToken.name();
+        const symbol = await winkToken.symbol();
+        const decimals = await winkToken.decimals();
+        const totalSupply = await winkToken.totalSupply();
+        const ownerBalance = await winkToken.balanceOf(address);
+        
+        console.log("\nToken Details:");
+        console.log(`- Name: ${name}`);
+        console.log(`- Symbol: ${symbol}`);
+        console.log(`- Decimals: ${decimals}`);
+        console.log(`- Total Supply: ${ethers.utils.formatUnits(totalSupply, decimals)}`);
+        console.log(`- Owner Balance: ${ethers.utils.formatUnits(ownerBalance, decimals)}`);
+      }
       
     } catch (error) {
       console.error("Error deploying contract:", error);
+      if (error.error && error.error.message) {
+        console.error("Detailed error:", error.error.message);
+      }
+      if (error.transaction) {
+        console.error("Failed transaction:", error.transaction);
+      }
       alert("Error deploying contract. Check console for details.");
     }
   }
