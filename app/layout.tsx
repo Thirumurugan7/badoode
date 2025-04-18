@@ -21,6 +21,7 @@ import {
   QueryClientProvider,
   QueryClient,
 } from "@tanstack/react-query";
+import { MainNav } from "@/components/ui/navbar";
 
 const config = getDefaultConfig({
   appName: 'My RainbowKit App',
@@ -45,6 +46,7 @@ export default function RootLayout({
         <RainbowKitProvider>
       <body
       >
+        <MainNav />
         {children}
       </body>
       </RainbowKitProvider>

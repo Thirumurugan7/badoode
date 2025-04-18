@@ -1,6 +1,7 @@
 'use client';
 
 import { ethers } from 'ethers';
+import { useState, useEffect } from 'react';
 
 // Define ABIs directly in the code
 const VanityDeployerABI = [
@@ -77,8 +78,19 @@ const WinkTokenABI = [
 ];
 
 export default function DeployPage() {
-  const salt = window.localStorage.getItem('salt');
+  const [salt, setSalt] = useState<string | null>(null);
+
+  useEffect(() => {
+    const storedSalt = window.localStorage.getItem('salt');
+    setSalt(storedSalt);
+  }, []);
+
   async function deployContract() {
+    if (salt === null) {
+      alert("Salt value not loaded yet.");
+      return;
+    }
+    
     if (!window.ethereum) {
       alert("Please install MetaMask!");
       return;
@@ -103,9 +115,7 @@ export default function DeployPage() {
 
       console.log("Receipt:", JSON.stringify(receipt, null, 2));
       
-      // Fix for TypeScript error - properly type the event
       const deployedEvent = receipt.events?.find((e: any) => {
-        // Look for the event with the correct topic signature
         return e.topics && e.topics[0] === "0x5c2cf7b115a5d943fa11d730c947a439f2895d25576349163d4c5e7d3c3f2abc";
       });
       
@@ -113,10 +123,8 @@ export default function DeployPage() {
         throw new Error("Deployment event not found in transaction receipt");
       }
       
-      // Parse the data to extract the deployed address
-      // The address is in the first 32 bytes of the data
       const data = deployedEvent.data;
-      const tokenAddress = "0x" + data.slice(26, 66); // Extract the address from the data
+      const tokenAddress = ethers.utils.getAddress("0x" + data.slice(-40));
       
       console.log("\n✅ SUCCESS! Token deployed with vanity address:");
       console.log(`   ${tokenAddress}`);
@@ -147,9 +155,10 @@ export default function DeployPage() {
       <h1 className="text-2xl mb-4">Deploy Contract</h1>
       <button 
         onClick={deployContract}
-        className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+        disabled={salt === null}
+        className={`bg-blue-500 text-white font-bold py-2 px-4 rounded ${salt === null ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-700'}`}
       >
-        Deploy with MetaMask
+        {salt === null ? 'Loading Salt...' : 'Deploy with MetaMask'}
       </button>
     </div>
   );
