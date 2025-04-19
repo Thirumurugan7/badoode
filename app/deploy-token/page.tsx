@@ -107,7 +107,7 @@ export default function VanityFinderPage() {
   const [txnHash, setTxnHash] = useState("");
   const [tokenAddress, setTokenAddress] = useState("");
   const [deployerAddress, setDeployerAddress] = useState("");
-  const [startSalt, setStartSalt] = useState<string>("");
+  const [startSalt, setStartSalt] = useState(0);
   const [batchSize, setBatchSize] = useState(100000); // Smaller batch size for API
   const [isSearching, setIsSearching] = useState(false);
   const [result, setResult] = useState<SearchResult>(null);
