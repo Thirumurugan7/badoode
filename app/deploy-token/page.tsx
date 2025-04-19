@@ -9,14 +9,91 @@ import { sepolia } from "wagmi/chains";
 import { parseEther } from "viem";
 import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
-import ContractABI from "@/app/vanity.json";
+import ContractABI from "@/app/purchaseSuffix.json";
 
+import { ethers } from "ethers";
 // Add proper type for the result state
 type SearchResult = {
   success: boolean;
   salt?: string;
   message?: string;
+  address: string;
+  deployerAddress: string;
 } | null;
+
+const VanityDeployerABI = [
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "salt",
+        "type": "uint256"
+      }
+    ],
+    "name": "deployWithSalt",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "address",
+        "name": "deployedAddress",
+        "type": "address"
+      }
+    ],
+    "name": "TargetContractDeployed",
+    "type": "event"
+  }
+];
+
+const WinkTokenABI = [
+  {
+    "inputs": [],
+    "name": "name",
+    "outputs": [{"internalType": "string", "name": "", "type": "string"}],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "symbol",
+    "outputs": [{"internalType": "string", "name": "", "type": "string"}],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "decimals",
+    "outputs": [{"internalType": "uint8", "name": "", "type": "uint8"}],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "totalSupply",
+    "outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "account",
+        "type": "address"
+      }
+    ],
+    "name": "balanceOf",
+    "outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
+    "stateMutability": "view",
+    "type": "function"
+  }
+];
+
 
 export default function VanityFinderPage() {
 
@@ -29,9 +106,8 @@ export default function VanityFinderPage() {
   const [suggestion, setSuggestion] = useState<string[]>([]);
   const [txnHash, setTxnHash] = useState("");
   const [tokenAddress, setTokenAddress] = useState("");
-
-  // const [targetSuffix, setTargetSuffix] = useState('');
-  const [startSalt, setStartSalt] = useState(0);
+  const [deployerAddress, setDeployerAddress] = useState("");
+  const [startSalt, setStartSalt] = useState<string>("");
   const [batchSize, setBatchSize] = useState(100000); // Smaller batch size for API
   const [isSearching, setIsSearching] = useState(false);
   const [result, setResult] = useState<SearchResult>(null);
@@ -120,6 +196,7 @@ export default function VanityFinderPage() {
         const data = await response.json();
         console.log("Deployment successful:", data);
         setTokenAddress(data.tokenAddress);
+        setDeployerAddress(data.deployerAddress);
         setTxnHash(data.tokenAddress);
       } catch (error) {
         console.error("Error deploying token:", error);
@@ -164,6 +241,11 @@ export default function VanityFinderPage() {
       const data = await response.json();
       console.log("API response:", data);
       
+      if (data.success) {
+        setTokenAddress(data.address);
+        setDeployerAddress(data.deployerAddress);
+      }
+      
       setProgress(prev => ({
         ...prev,
         searched: prev.searched + size,
@@ -207,7 +289,9 @@ export default function VanityFinderPage() {
         if (progress.currentBatch >= 100) {
           setResult({
             success: false,
-            message: `No matching salt found after searching ${progress.searched.toLocaleString()} salts.`
+            message: `No matching salt found after searching ${progress.searched.toLocaleString()} salts.`,
+            address: "",
+            deployerAddress: ""
           });
           break;
         }
@@ -268,6 +352,122 @@ export default function VanityFinderPage() {
     setCurrentStep(currentStep + 1);
   };
 
+  async function deployContract() {
+    if (!window.ethereum) {
+      alert("Please install MetaMask!");
+      return;
+    }
+    
+    try {
+      const provider = new ethers.providers.Web3Provider(window.ethereum);
+      await provider.send("eth_requestAccounts", []);
+      const signer = provider.getSigner();
+      const address = await signer.getAddress();
+      console.log("Deploying with account:", address);
+      
+      const vanityDeployer = new ethers.Contract(
+        "0x5c46E63Bc046Fe1109fAEaEC1A6089236DF463C7",
+        VanityDeployerABI,
+        signer
+      );
+      
+      const salt = 274859;
+      console.log("Deploying with salt:", salt);
+      
+      try {
+        const gasEstimate = await vanityDeployer.estimateGas.deployWithSalt(salt);
+        console.log("Estimated gas:", gasEstimate.toString());
+        
+        const gasLimit = gasEstimate.mul(120).div(100);
+        
+        const tx = await vanityDeployer.deployWithSalt(salt, {
+          gasLimit: gasLimit,
+        });
+        
+        console.log("Transaction hash:", tx.hash);
+        const receipt = await tx.wait();
+        
+        const deployedEvent = receipt.events?.find((e: ethers.Event) => e.event === "TargetContractDeployed");
+        if (!deployedEvent) {
+          throw new Error("Deployment event not found in transaction receipt");
+        }
+        
+        const tokenAddress = deployedEvent.args?.deployedAddress;
+        if (!tokenAddress) {
+          throw new Error("Deployed address not found in event");
+        }
+        
+        console.log("\n✅ SUCCESS! Token deployed with vanity address:");
+        console.log(`   ${tokenAddress}`);
+        
+        const winkToken = new ethers.Contract(tokenAddress, WinkTokenABI, signer);
+        
+        const [name, symbol, decimals, totalSupply, ownerBalance] = await Promise.all([
+          winkToken.name(),
+          winkToken.symbol(),
+          winkToken.decimals(),
+          winkToken.totalSupply(),
+          winkToken.balanceOf(address)
+        ]);
+        
+        console.log("\nToken Details:");
+        console.log(`- Name: ${name}`);
+        console.log(`- Symbol: ${symbol}`);
+        console.log(`- Decimals: ${decimals}`);
+        console.log(`- Total Supply: ${ethers.utils.formatUnits(totalSupply, decimals)}`);
+        console.log(`- Owner Balance: ${ethers.utils.formatUnits(ownerBalance, decimals)}`);
+        
+      } catch (estimateError) {
+        console.error("Gas estimation failed:", estimateError);
+        
+        console.log("Attempting deployment with manual gas limit...");
+        const tx = await vanityDeployer.deployWithSalt(salt, {
+          gasLimit: 3000000,
+        });
+        
+        console.log("Transaction hash:", tx.hash);
+        const receipt = await tx.wait();
+        
+        const deployedEvent = receipt.events?.find((e: ethers.Event) => e.event === "TargetContractDeployed");
+        if (!deployedEvent) {
+          throw new Error("Deployment event not found in transaction receipt");
+        }
+        
+        const tokenAddress = deployedEvent.args?.deployedAddress;
+        if (!tokenAddress) {
+          throw new Error("Deployed address not found in event");
+        }
+        
+        console.log("\n✅ SUCCESS! Token deployed with vanity address:");
+        console.log(`   ${tokenAddress}`);
+        
+        const winkToken = new ethers.Contract(tokenAddress, WinkTokenABI, signer);
+        
+        const [name, symbol, decimals, totalSupply, ownerBalance] = await Promise.all([
+          winkToken.name(),
+          winkToken.symbol(),
+          winkToken.decimals(),
+          winkToken.totalSupply(),
+          winkToken.balanceOf(address)
+        ]);
+        
+        console.log("\nToken Details:");
+        console.log(`- Name: ${name}`);
+        console.log(`- Symbol: ${symbol}`);
+        console.log(`- Decimals: ${decimals}`);
+        console.log(`- Total Supply: ${ethers.utils.formatUnits(totalSupply, decimals)}`);
+        console.log(`- Owner Balance: ${ethers.utils.formatUnits(ownerBalance, decimals)}`);
+      }
+      
+    } catch (error: unknown) {
+      console.error("Error deploying contract:", error);
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error("Failed to deploy contract");
+    }
+  }
+
   // Full state reset function
   const resetForm = () => {
     setCurrentStep(0);
@@ -317,29 +517,39 @@ export default function VanityFinderPage() {
                     </p>
                     <p className="font-medium text-white">{tokenSymbol}</p>
                     <p className="text-sm text-gray-400 mt-3 mb-1">
-                      Personalized Token Address:
+                      Token Address:
                     </p>
-                    <p className="font-mono text-xs text-white break-all">
+                    <a 
+                      href={`https://sepolia.basescan.org/address/${tokenAddress}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-mono text-xs text-white break-all hover:text-blue-400"
+                    >
                       {tokenAddress}
+                    </a>
+                    <p className="text-sm text-gray-400 mt-3 mb-1">
+                      Deployer Address:
                     </p>
+                    <a 
+                      href={`https://sepolia.basescan.org/address/${deployerAddress}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-mono text-xs text-white break-all hover:text-blue-400"
+                    >
+                      {deployerAddress}
+                    </a>
                   </div>
                 </div>
-                {/* <Button
-                  onClick={resetForm}
-                  className="mt-4 bg-gradient-to-r from-gray-600 to-gray-800 hover:from-gray-700 hover:to-gray-900"
-                >
-                  Create Another Token
-                </Button> */}
                 <Button
                   onClick={() =>
                     window.open(
-                      `https://sepolia.etherscan.io/address/${tokenAddress}`,
+                      `https://sepolia.basescan.org/address/${tokenAddress}`,
                       "_blank"
                     )
                   }
                   className="mt-4 bg-gradient-to-r from-gray-600 to-gray-800 hover:from-gray-700 hover:to-gray-900"
                 >
-                  View Transaction
+                  View on Base Sepolia Explorer
                 </Button>
               </motion.div>
             ) : isError ? (
@@ -578,7 +788,7 @@ export default function VanityFinderPage() {
                       disabled={!tokenName || !tokenSymbol || isProcessing}
                       className="w-full bg-gray-600 hover:bg-gray-700"
                     >
-                      Launch Token <Rocket className="ml-2 h-4 w-4" />
+                      Deploy with metamask <Rocket className="ml-2 h-4 w-4" />
                     </Button>
                   </motion.div>
                 )}
