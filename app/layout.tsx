@@ -22,6 +22,8 @@ import {
   QueryClient,
 } from "@tanstack/react-query";
 import { MainNav } from "@/components/ui/navbar";
+import { Inter } from "next/font/google";
+import { Providers } from '@/app/providers';
 
 const config = getDefaultConfig({
   appName: 'My RainbowKit App',
@@ -32,7 +34,7 @@ const config = getDefaultConfig({
 
 const queryClient = new QueryClient();
 
-
+const inter = Inter({ subsets: ["latin"] });
 
 export default function RootLayout({
   children,
@@ -41,17 +43,18 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <WagmiProvider config={config}>
-      <QueryClientProvider client={queryClient}>
-        <RainbowKitProvider>
-      <body
-      >
-        <MainNav />
-        {children}
+      <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@100;200;300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
+        <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@10..48,200;10..48,300;10..48,400;10..48,500;10..48,600;10..48,700;10..48,800&display=swap" rel="stylesheet" />
+      </head>
+      <body className={`${inter.className} outfit-font`}>
+        <Providers>
+          <MainNav />
+          {children}
+        </Providers>
       </body>
-      </RainbowKitProvider>
-      </QueryClientProvider>
-      </WagmiProvider>
     </html>
   );
 }

@@ -13,8 +13,8 @@
     );
     
     // Deploy with the found salt
-    console.log("Deploying with salt: 13623");
-    const tx = await vanityDeployer.deployWithSalt(13623);
+    console.log("Deploying with salt: 12079");
+    const tx = await vanityDeployer.deployWithSalt(12079);
     const receipt = await tx.wait();
     
     // Get the deployed token address from the event
