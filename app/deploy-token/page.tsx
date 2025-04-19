@@ -741,6 +741,11 @@ export default function VanityFinderPage() {
                         "Connect Wallet"
                       )}
                     </Button>
+                    {isSearching && (
+                      <p className="mt-2 text-xs text-gray-400 text-center">
+                        Please wait while we search for a vanity address. This might take up to 5 minutes.
+                      </p>
+                    )}
                   </motion.div>
                 )}
 
