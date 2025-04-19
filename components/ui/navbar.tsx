@@ -17,15 +17,15 @@ export function MainNav() {
                     </Link>
                     <div className="flex items-center space-x-4">
                         <Link
-                            href="/vanity-finder"
+                            href="/deploy-token"
                             className={cn(
-                                "text-sm font-medium transition-colors hover:text-primary",
+                                "text-sm font-medium transition-colors hover:text-white",
                                 pathname === "/vanity-finder" ? "text-foreground" : "text-muted-foreground"
                             )}
                         >
-                            Vanity Finder
+                            Depoly token
                         </Link>
-                        <Link
+                        {/* <Link
                             href="/create-token"
                             className={cn(
                                 "text-sm font-medium transition-colors hover:text-primary",
@@ -33,19 +33,19 @@ export function MainNav() {
                             )}
                         >
                             Create Token
-                        </Link>
+                        </Link> */}
                         <Link
                             href="/create-wallet"
                             className={cn(
-                                "text-sm font-medium transition-colors hover:text-primary",
+                                "text-sm font-medium transition-colors hover:text-white",
                                 pathname === "/create-wallet" ? "text-foreground" : "text-muted-foreground"
                             )}
                         >
                             Create Wallet
                         </Link>
-                        <div className="flex items-center">
-                            <Custombutton />
-                        </div>
+                    </div>
+                    <div className="flex items-center">
+                        <Custombutton />
                     </div>
                 </nav>
 
