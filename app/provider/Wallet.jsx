@@ -40,45 +40,39 @@ const Custombutton = () => {
             {(() => {
               if (!connected) {
                 return (
-                  <>
-                    <Button
-                      className="w-fit p-3 px-8 bg-gray-600 hover:bg-gray-700"
-                      onClick={openConnectModal}
-                      type="button"
-                    >
-                      Connect Wallet
-                    </Button>
-                  </>
+                  <Button
+                    className="w-fit p-3 px-8 bg-[#10ad71] hover:bg-[#0d8a5a] text-white outfit-font"
+                    onClick={openConnectModal}
+                    type="button"
+                  >
+                    Connect Wallet
+                  </Button>
                 );
               }
 
               if (chain.unsupported) {
                 return (
-                  <>
-                    <Button
-                      className=" w-fit p-3 px-8 bg-red-500 hover:bg-red-600"
-                      onClick={openChainModal}
-                      type="button"
-                    >
-                      Wrong network
-                    </Button>
-                  </>
+                  <Button
+                    className="w-fit p-3 px-8 bg-red-500 hover:bg-red-600 text-white outfit-font"
+                    onClick={openChainModal}
+                    type="button"
+                  >
+                    Wrong network
+                  </Button>
                 );
               }
 
               return (
-                <div className="">
-                  <Button
-                    className="w-fit p-3 px-8 bg-gray-600 hover:bg-gray-700"
-                    onClick={openAccountModal}
-                    type="button"
-                  >
-                    {account.displayName}
-                    {account.displayBalance
-                      ? ` (${account.displayBalance})`
-                      : ""}
-                  </Button>
-                </div>
+                <Button
+                  className="w-fit p-3 px-8 bg-[#10ad71] hover:bg-[#0d8a5a] text-white outfit-font"
+                  onClick={openAccountModal}
+                  type="button"
+                >
+                  {account.displayName}
+                  {account.displayBalance
+                    ? ` (${account.displayBalance})`
+                    : ""}
+                </Button>
               );
             })()}
           </div>
