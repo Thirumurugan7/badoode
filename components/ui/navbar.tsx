@@ -12,8 +12,8 @@ export function MainNav() {
         <header className="fixed top-0 w-full outfit-font bg-white/95 backdrop-blur border-b border-gray-200 z-50">
             <div className="container flex h-16 px-4 sm:px-6 lg:px-8">
                 <nav className="flex w-full justify-between items-center">
-                    <Link href="/" className="wendy-font text-2xl font-medium text-[#10ad71]">
-                        badOode
+                    <Link href="/" className="wendy-font text-2xl font-medium text-[#10ad71] flex items-center gap-1">
+                        <p className="text-white bg-[#10ad71] w-fit">#</p>badOode
                     </Link>
                     <div className="flex items-center space-x-8">
                         <Link
