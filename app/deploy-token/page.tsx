@@ -786,7 +786,7 @@ export default function VanityFinderPage() {
                         disabled={!tokenName || !tokenSymbol || isProcessing}
                         className="w-full bg-[#10ad71] hover:bg-[#0d8a5a] text-white"
                       >
-                        Deploy with metamask <Rocket className="ml-2 h-4 w-4" />
+                        Deploy your token
                       </Button>
                     </motion.div>
                   )}
