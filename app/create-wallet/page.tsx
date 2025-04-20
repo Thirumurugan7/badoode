@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
-import { Rocket, CheckCircle2, ArrowRight, XCircle } from "lucide-react";
+import { Rocket, CheckCircle2, ArrowRight, XCircle, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
 import { useAccount, usePublicClient, useWriteContract } from "wagmi";
 import { sepolia } from "wagmi/chains";
@@ -322,8 +322,8 @@ const CreateWallet = () => {
                     {isConnected ? (
                       isProcessing ? (
                         <div className="flex items-center justify-center">
-                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                          Creating Wallet...
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                                Creating Wallet...
                         </div>
                       ) : (
                         <>
