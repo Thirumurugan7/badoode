@@ -43,6 +43,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <title>badOode - Deploy custom token and wallet</title>
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
