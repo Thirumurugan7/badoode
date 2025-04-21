@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import ContractABI from "@/app/purchaseSuffix.json";
 
 import { ethers } from "ethers";
+import Deploy from "../comp/deploy";
 // Add proper type for the result state
 type SearchResult = {
   success: boolean;
@@ -54,28 +55,28 @@ const WinkTokenABI = [
   {
     "inputs": [],
     "name": "name",
-    "outputs": [{"internalType": "string", "name": "", "type": "string"}],
+    "outputs": [{ "internalType": "string", "name": "", "type": "string" }],
     "stateMutability": "view",
     "type": "function"
   },
   {
     "inputs": [],
     "name": "symbol",
-    "outputs": [{"internalType": "string", "name": "", "type": "string"}],
+    "outputs": [{ "internalType": "string", "name": "", "type": "string" }],
     "stateMutability": "view",
     "type": "function"
   },
   {
     "inputs": [],
     "name": "decimals",
-    "outputs": [{"internalType": "uint8", "name": "", "type": "uint8"}],
+    "outputs": [{ "internalType": "uint8", "name": "", "type": "uint8" }],
     "stateMutability": "view",
     "type": "function"
   },
   {
     "inputs": [],
     "name": "totalSupply",
-    "outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
+    "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
     "stateMutability": "view",
     "type": "function"
   },
@@ -88,7 +89,7 @@ const WinkTokenABI = [
       }
     ],
     "name": "balanceOf",
-    "outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
+    "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
     "stateMutability": "view",
     "type": "function"
   }
@@ -240,18 +241,18 @@ export default function VanityFinderPage() {
 
       const data = await response.json();
       console.log("API response:", data);
-      
+
       if (data.success) {
         setTokenAddress(data.address);
         setDeployerAddress(data.deployerAddress);
       }
-      
+
       setProgress(prev => ({
         ...prev,
         searched: prev.searched + size,
         currentBatch: prev.currentBatch + 1
       }));
-      
+
       return data;
     } catch (err) {
       console.error('Error searching batch:', err);
@@ -266,15 +267,15 @@ export default function VanityFinderPage() {
     setResult(null);
     setError(null);
     setProgress({ searched: 0, currentBatch: 0 });
-    
+
     let currentStart = parseInt(String(startSalt));
     const size = parseInt(String(batchSize));
     let found = false;
-    
+
     try {
       while (!found) {
         const batchResult = await searchBatch(currentStart, size, contractSuffix);
-        
+
         if (batchResult?.success) {
           if (batchResult.salt) {
             localStorage.setItem('salt', batchResult.salt);
@@ -283,9 +284,9 @@ export default function VanityFinderPage() {
           found = true;
           break;
         }
-        
+
         currentStart += size;
-        
+
         if (progress.currentBatch >= 100) {
           setResult({
             success: false,
@@ -296,7 +297,7 @@ export default function VanityFinderPage() {
           break;
         }
       }
-      
+
       return found; // Return true if a match was found
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'An error occurred while searching';
@@ -353,13 +354,37 @@ export default function VanityFinderPage() {
   };
 
   async function deployContract() {
+    setIsProcessing(true);
+    setError(null);
+    setErrorMessage("");
+
+    const storedSalt = window.localStorage.getItem('salt');
+    if (!storedSalt) {
+      setErrorMessage("Salt value not loaded yet.");
+      setIsProcessing(false);
+      setIsError(true);
+      return;
+    }
+
     if (!window.ethereum) {
-      alert("Please install MetaMask!");
+      setErrorMessage("Please install MetaMask!");
+      setIsProcessing(false);
+      setIsError(true);
       return;
     }
     
     try {
       const provider = new ethers.providers.Web3Provider(window.ethereum);
+      
+      // Check if we're on the correct network (Base Sepolia)
+      const network = await provider.getNetwork();
+      if (network.chainId !== 84532) {
+        setErrorMessage("Please switch to Base Sepolia network to deploy your token.");
+        setIsProcessing(false);
+        setIsError(true);
+        return;
+      }
+
       await provider.send("eth_requestAccounts", []);
       const signer = provider.getSigner();
       const address = await signer.getAddress();
@@ -371,7 +396,7 @@ export default function VanityFinderPage() {
         signer
       );
       
-      const salt = 274859;
+      const salt = storedSalt;
       console.log("Deploying with salt:", salt);
       
       try {
@@ -387,84 +412,99 @@ export default function VanityFinderPage() {
         console.log("Transaction hash:", tx.hash);
         const receipt = await tx.wait();
         
-        const deployedEvent = receipt.events?.find((e: ethers.Event) => e.event === "TargetContractDeployed");
-        if (!deployedEvent) {
-          throw new Error("Deployment event not found in transaction receipt");
-        }
-        
-        const tokenAddress = deployedEvent.args?.deployedAddress;
-        if (!tokenAddress) {
-          throw new Error("Deployed address not found in event");
-        }
-        
-        console.log("\n✅ SUCCESS! Token deployed with vanity address:");
-        console.log(`   ${tokenAddress}`);
-        
-        const winkToken = new ethers.Contract(tokenAddress, WinkTokenABI, signer);
-        
-        const [name, symbol, decimals, totalSupply, ownerBalance] = await Promise.all([
-          winkToken.name(),
-          winkToken.symbol(),
-          winkToken.decimals(),
-          winkToken.totalSupply(),
-          winkToken.balanceOf(address)
-        ]);
-        
-        console.log("\nToken Details:");
-        console.log(`- Name: ${name}`);
-        console.log(`- Symbol: ${symbol}`);
-        console.log(`- Decimals: ${decimals}`);
-        console.log(`- Total Supply: ${ethers.utils.formatUnits(totalSupply, decimals)}`);
-        console.log(`- Owner Balance: ${ethers.utils.formatUnits(ownerBalance, decimals)}`);
-        
-      } catch (estimateError) {
-        console.error("Gas estimation failed:", estimateError);
-        
-        console.log("Attempting deployment with manual gas limit...");
-        const tx = await vanityDeployer.deployWithSalt(salt, {
-          gasLimit: 3000000,
+        const deployedEvent = receipt.events?.find((e: any) => {
+          return e.topics && e.topics[0] === "0x5c2cf7b115a5d943fa11d730c947a439f2895d25576349163d4c5e7d3c3f2abc";
         });
         
-        console.log("Transaction hash:", tx.hash);
-        const receipt = await tx.wait();
-        
-        const deployedEvent = receipt.events?.find((e: ethers.Event) => e.event === "TargetContractDeployed");
         if (!deployedEvent) {
           throw new Error("Deployment event not found in transaction receipt");
         }
         
-        const tokenAddress = deployedEvent.args?.deployedAddress;
-        if (!tokenAddress) {
-          throw new Error("Deployed address not found in event");
-        }
+        const data = deployedEvent.data;
+        const tokenAddress = ethers.utils.getAddress("0x" + data.slice(-40));
         
         console.log("\n✅ SUCCESS! Token deployed with vanity address:");
         console.log(`   ${tokenAddress}`);
         
-        const winkToken = new ethers.Contract(tokenAddress, WinkTokenABI, signer);
+        // Wait for contract to be fully deployed and initialized
+        const maxAttempts = 5;
+        const delayBetweenAttempts = 5000; // 5 seconds
+        let tokenDetails = null;
         
-        const [name, symbol, decimals, totalSupply, ownerBalance] = await Promise.all([
-          winkToken.name(),
-          winkToken.symbol(),
-          winkToken.decimals(),
-          winkToken.totalSupply(),
-          winkToken.balanceOf(address)
-        ]);
+        for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+          try {
+            console.log(`Attempt ${attempt} to read token details...`);
+            const winkToken = new ethers.Contract(tokenAddress, WinkTokenABI, signer);
+            
+            const [name, symbol, decimals, totalSupply, ownerBalance] = await Promise.all([
+              winkToken.name(),
+              winkToken.symbol(),
+              winkToken.decimals(),
+              winkToken.totalSupply(),
+              winkToken.balanceOf(address)
+            ]);
+            
+            tokenDetails = {
+              name,
+              symbol,
+              decimals,
+              totalSupply,
+              ownerBalance
+            };
+            
+            console.log("\nToken Details:");
+            console.log(`- Name: ${name}`);
+            console.log(`- Symbol: ${symbol}`);
+            console.log(`- Decimals: ${decimals}`);
+            console.log(`- Total Supply: ${ethers.utils.formatUnits(totalSupply, decimals)}`);
+            console.log(`- Owner Balance: ${ethers.utils.formatUnits(ownerBalance, decimals)}`);
+            
+            break; // Success, exit the loop
+          } catch (tokenError: any) {
+            console.log(`Attempt ${attempt} failed:`, tokenError.message);
+            if (attempt < maxAttempts) {
+              console.log(`Waiting ${delayBetweenAttempts/1000} seconds before next attempt...`);
+              await new Promise(resolve => setTimeout(resolve, delayBetweenAttempts));
+            }
+          }
+        }
         
-        console.log("\nToken Details:");
-        console.log(`- Name: ${name}`);
-        console.log(`- Symbol: ${symbol}`);
-        console.log(`- Decimals: ${decimals}`);
-        console.log(`- Total Supply: ${ethers.utils.formatUnits(totalSupply, decimals)}`);
-        console.log(`- Owner Balance: ${ethers.utils.formatUnits(ownerBalance, decimals)}`);
+        // Set success state regardless of token details
+        setTokenAddress(tokenAddress);
+        setDeployerAddress(address);
+        setIsSuccess(true);
+        
+        if (!tokenDetails) {
+          console.log("Could not read token details after multiple attempts. The token was still deployed successfully.");
+        }
+        
+      } catch (estimateError: any) {
+        console.error("Gas estimation failed:", estimateError);
+        
+        if (estimateError.message === 'NETWORK_ERROR') {
+          setErrorMessage("Network changed. Please ensure you're on Base Sepolia network.");
+          setIsError(true);
+          setIsProcessing(false);
+          return;
+        }
+        
+        throw estimateError;
       }
       
     } catch (error: unknown) {
       console.error("Error deploying contract:", error);
       if (error instanceof Error) {
-        throw error;
+        if (error.message === 'NETWORK_ERROR') {
+          setErrorMessage("Network changed. Please ensure you're on Base Sepolia network.");
+        } else {
+          setErrorMessage(error.message);
+        }
+      } else {
+        setErrorMessage("Failed to deploy contract");
       }
-      throw new Error("Failed to deploy contract");
+      setIsError(true);
+    } finally {
+      setIsProcessing(false);
     }
   }
 
@@ -519,7 +559,7 @@ export default function VanityFinderPage() {
                       <p className="text-sm text-gray-600 mt-3 mb-1">
                         Token Address:
                       </p>
-                      <a 
+                      <a
                         href={`https://sepolia.basescan.org/address/${tokenAddress}`}
                         target="_blank"
                         rel="noopener noreferrer"
@@ -530,7 +570,7 @@ export default function VanityFinderPage() {
                       <p className="text-sm text-gray-600 mt-3 mb-1">
                         Deployer Address:
                       </p>
-                      <a 
+                      <a
                         href={`https://sepolia.basescan.org/address/${deployerAddress}`}
                         target="_blank"
                         rel="noopener noreferrer"
@@ -616,22 +656,20 @@ export default function VanityFinderPage() {
                         <div key={step} className="flex flex-col items-center">
                           <div
                             className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-lg mb-2
-                            ${
-                              currentStep === step
+                            ${currentStep === step
                                 ? "bg-[#10ad71] text-white"
                                 : currentStep > step
-                                ? "bg-gray-200 text-gray-600"
-                                : "bg-gray-100 text-gray-400"
-                            }`}
+                                  ? "bg-gray-200 text-gray-600"
+                                  : "bg-gray-100 text-gray-400"
+                              }`}
                           >
                             {currentStep > step ? "✓" : step + 1}
                           </div>
                           <span
-                            className={`text-xs ${
-                              currentStep >= step
+                            className={`text-xs ${currentStep >= step
                                 ? "text-gray-900"
                                 : "text-gray-400"
-                            }`}
+                              }`}
                           >
                             {step === 0
                               ? "Personalize token address"
@@ -715,7 +753,7 @@ export default function VanityFinderPage() {
                         disabled={
                           !contractSuffix ||
                           !isHexadecimal(contractSuffix) ||
-                          isSearching  ||
+                          isSearching ||
                           !isConnected
                         }
                       >
@@ -782,7 +820,7 @@ export default function VanityFinderPage() {
                         </div>
                       </div>
                       <Button
-                        onClick={handleNextStep}
+                        onClick={deployContract}
                         disabled={!tokenName || !tokenSymbol || isProcessing}
                         className="w-full bg-[#10ad71] hover:bg-[#0d8a5a] text-white"
                       >
@@ -815,5 +853,5 @@ export default function VanityFinderPage() {
         </div>
       </section>
     </div>
-  );  
+  );
 } 

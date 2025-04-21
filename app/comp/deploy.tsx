@@ -1,5 +1,6 @@
 'use client';
 
+import { Button } from '@/components/ui/button';
 import { ethers } from 'ethers';
 import { useState, useEffect } from 'react';
 
@@ -151,15 +152,14 @@ export default function DeployPage() {
   }
 
   return (
-    <div className="p-4">
-      <h1 className="text-2xl mb-4">Deploy Contract</h1>
-      <button 
+    <div className="">
+      <Button 
         onClick={deployContract}
         disabled={salt === null}
         className={`bg-blue-500 text-white font-bold py-2 px-4 rounded ${salt === null ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-700'}`}
       >
         {salt === null ? 'Loading Salt...' : 'Deploy with MetaMask'}
-      </button>
+      </Button>
     </div>
   );
 }
