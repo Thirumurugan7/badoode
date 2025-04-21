@@ -90,6 +90,8 @@ const CreateWallet = () => {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
 
+      setIsProcessing(false);
+
         setIsSuccess(true);
         const data = await response.json();
         console.log("Wallet generation successful:", data);
@@ -99,6 +101,7 @@ const CreateWallet = () => {
       } catch (error) {
         console.error("Error generating wallet:", error);
         setIsError(true);
+        setIsProcessing(false);
         setErrorMessage(error instanceof Error ? error.message : "Unknown error occurred");
       }
     } catch (error) {
@@ -349,7 +352,7 @@ const CreateWallet = () => {
                       Processing Transaction
                     </h3>
                     <p className="text-gray-600">
-                      Please wait while we create your wallet, this might take upto 2 minutes
+                      Please wait while we create your wallet, this might take upto 15 minutes
                     </p>
                   </div>
                 </div>
