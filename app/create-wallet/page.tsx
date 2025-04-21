@@ -75,7 +75,7 @@ const CreateWallet = () => {
 
       await publicClient?.waitForTransactionReceipt({ hash: tx });
       try {
-        const response = await fetch("http://localhost:3000/generate-wallet", {
+        const response = await fetch("/api/generate-wallet", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -322,7 +322,7 @@ const CreateWallet = () => {
                     {isConnected ? (
                       isProcessing ? (
                         <div className="flex items-center justify-center">
-                                <Loader2 className="h-4 w-4 animate-spin" />
+                                {/* <Loader2 className="h-4 w-4 animate-spin" /> */}
                                 Creating Wallet...
                         </div>
                       ) : (
@@ -345,7 +345,7 @@ const CreateWallet = () => {
                     <div className="absolute top-0 left-0 w-20 h-20 border-t-4 border-[#10ad71] rounded-full animate-spin"></div>
                   </div>
                   <div className="text-center">
-                    <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                    <h3 className="text-xl wendy-font font-semibold text-gray-900 mb-2">
                       Processing Transaction
                     </h3>
                     <p className="text-gray-600">
