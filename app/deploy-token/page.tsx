@@ -426,16 +426,22 @@ export default function VanityFinderPage() {
         console.log("\n✅ SUCCESS! Token deployed with vanity address:");
         console.log(`   ${tokenAddress}`);
         
-        // Wait for contract to be fully deployed and initialized
+        // Wait for 15 seconds to ensure contract is fully initialized
+        setDeployerAddress(address);
+        setIsSuccess(true);
+        
+        console.log("Waiting for contract initialization...");
+        await new Promise(resolve => setTimeout(resolve, 15000));
+        
+        const winkToken = new ethers.Contract(tokenAddress, WinkTokenABI, signer);
+       
+        // Try to read token details with retries
+        let attempts = 0;
         const maxAttempts = 5;
         const delayBetweenAttempts = 5000; // 5 seconds
-        let tokenDetails = null;
         
-        for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+        while (attempts < maxAttempts) {
           try {
-            console.log(`Attempt ${attempt} to read token details...`);
-            const winkToken = new ethers.Contract(tokenAddress, WinkTokenABI, signer);
-            
             const [name, symbol, decimals, totalSupply, ownerBalance] = await Promise.all([
               winkToken.name(),
               winkToken.symbol(),
@@ -444,14 +450,6 @@ export default function VanityFinderPage() {
               winkToken.balanceOf(address)
             ]);
             
-            tokenDetails = {
-              name,
-              symbol,
-              decimals,
-              totalSupply,
-              ownerBalance
-            };
-            
             console.log("\nToken Details:");
             console.log(`- Name: ${name}`);
             console.log(`- Symbol: ${symbol}`);
@@ -459,25 +457,20 @@ export default function VanityFinderPage() {
             console.log(`- Total Supply: ${ethers.utils.formatUnits(totalSupply, decimals)}`);
             console.log(`- Owner Balance: ${ethers.utils.formatUnits(ownerBalance, decimals)}`);
             
-            break; // Success, exit the loop
-          } catch (tokenError: any) {
-            console.log(`Attempt ${attempt} failed:`, tokenError.message);
-            if (attempt < maxAttempts) {
-              console.log(`Waiting ${delayBetweenAttempts/1000} seconds before next attempt...`);
+            // Set success state
+        
+            break;
+          } catch (error: any) {
+            console.log(`Attempt ${attempts + 1} failed:`, error.message);
+            attempts++;
+            if (attempts < maxAttempts) {
+              console.log(`Retrying in ${delayBetweenAttempts/1000} seconds...`);
               await new Promise(resolve => setTimeout(resolve, delayBetweenAttempts));
+            } else {
+              throw new Error("Failed to read contract details after multiple attempts");
             }
           }
         }
-        
-        // Set success state regardless of token details
-        setTokenAddress(tokenAddress);
-        setDeployerAddress(address);
-        setIsSuccess(true);
-        
-        if (!tokenDetails) {
-          console.log("Could not read token details after multiple attempts. The token was still deployed successfully.");
-        }
-        
       } catch (estimateError: any) {
         console.error("Gas estimation failed:", estimateError);
         
@@ -490,7 +483,6 @@ export default function VanityFinderPage() {
         
         throw estimateError;
       }
-      
     } catch (error: unknown) {
       console.error("Error deploying contract:", error);
       if (error instanceof Error) {
