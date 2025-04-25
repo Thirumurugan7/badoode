@@ -594,7 +594,7 @@ export default function VanityFinderPage() {
                   </div>
                   <div className="flex space-x-4">
                     <a
-                      href={`https://sepolia.etherscan.io/address/${tokenAddress}`}
+                      href={`https://sepolia.etherscan.io/token/${tokenAddress}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="flex-1 bg-[#10ad71] hover:bg-[#0d8a5a] text-white py-2 px-4 rounded-md text-sm font-medium"
