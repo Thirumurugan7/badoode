@@ -4,7 +4,7 @@ import { CheckCircle2, XCircle, Loader2 } from "lucide-react";
 import { Card } from '@/components/ui/card';
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
-import { useAccount, usePublicClient, useWriteContract } from "wagmi";
+import { useAccount } from "wagmi";
 
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
@@ -209,7 +209,7 @@ export default function VanityFinderPage() {
 
   const tokenDecimals = 18;
 
-  const { address, isConnected } = useAccount();
+  const { isConnected } = useAccount();
 
   const isHexadecimal = (str: string) => /^[0-9a-fA-F]+$/.test(str);
 
