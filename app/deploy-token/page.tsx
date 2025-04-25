@@ -193,7 +193,7 @@ export default function VanityFinderPage() {
 
       // Step 3: Deploy Contract
       setCurrentOperation("Deploying token contract...");
-      await deployContract();
+     
 
     } catch (error) {
       console.error("Deployment process failed:", error);
@@ -338,6 +338,8 @@ export default function VanityFinderPage() {
   async function findSalt() {
     setIsSearching(true);
     setErrorMessage("");
+    setIsProcessing(true);
+
     
     try {
       // Get the stored values
@@ -400,7 +402,8 @@ export default function VanityFinderPage() {
               });
               
               // Move to the next step
-              setCurrentStep(2);
+              // setCurrentStep(2);
+              await deployContract();
             } else {
               setErrorMessage(pollData.message || 'Search completed without finding a matching salt');
               setIsError(true);
@@ -429,9 +432,10 @@ export default function VanityFinderPage() {
   async function deployContract() {
     // setIsProcessing(true);
     setErrorMessage("");
-
+console.log("executing deploycontract")
     const storedSalt = localStorage.getItem('salt');
     const storedVanityDeployerAddress = localStorage.getItem('vanityDeployerAddress') || vanityDeployerAddress;
+    console.log("storedSalt", storedSalt, "storedVanityDeployerAddress", storedVanityDeployerAddress);
     
     if (!storedSalt) {
       setErrorMessage("Salt value not found. Please complete the salt search first.");
