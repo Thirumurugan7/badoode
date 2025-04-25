@@ -244,6 +244,7 @@ export default function VanityFinderPage() {
 
   // Step 1: Deploy VanityContractDeployer with token bytecode
   async function deployVanityDeployer() {
+    // setIsProcessing(true);
     setErrorMessage("");
 
     if (!window.ethereum) {
@@ -252,27 +253,27 @@ export default function VanityFinderPage() {
       setIsError(true);
       return;
     }
-
+    
     try {
       const provider = new ethers.providers.Web3Provider(window.ethereum);
-
+      
       await provider.send("eth_requestAccounts", []);
       const signer = provider.getSigner();
       const address = await signer.getAddress();
       console.log("Deploying with account:", address);
-
+      
       // Connect to the TokenFactory
       const tokenFactory = new ethers.Contract(
         "0xA5286AFfF5e52d15A67482A1cfc326a900757857", // TokenFactory address
         TokenFactoryABI,
         signer
       );
-
+      
 
 
       console.log("Connected to TokenFactory");
       console.log("Generating token bytecode...");
-
+      
       // Generate token bytecode
       const tokenBytecode = await tokenFactory.getWinkTokenBytecode(
         tokenName,
@@ -281,12 +282,12 @@ export default function VanityFinderPage() {
         ethers.utils.parseUnits(tokenSupply, tokenDecimals),
         address
       );
-
+      
       console.log("Token bytecode generated");
-
+      
       // Deploy VanityContractDeployer with the token bytecode
       console.log("Deploying VanityContractDeployer...");
-
+      
       // Create contract factory for VanityContractDeployer
       const vanityDeployerFactory = new ethers.ContractFactory(
         VanityDeployerABI,
@@ -298,21 +299,21 @@ export default function VanityFinderPage() {
       // // await vanityDeployerFactory.deployed();
 
       // console.log("VanityDeployerFactory deployed to:", vanityDeployerFactoryr.address);
-
+      
       // Deploy the contract
       const vanityDeployer = await vanityDeployerFactory.deploy(tokenBytecode);
       await vanityDeployer.deployed();
-
+      
       console.log("VanityContractDeployer deployed to:", vanityDeployer.address);
-
+      
       // Calculate bytecode hash
       const bytecodeHash = ethers.utils.keccak256(tokenBytecode);
       console.log("Bytecode hash:", bytecodeHash);
-
+      
       // Save the deployment info
       setVanityDeployerAddress(vanityDeployer.address);
       setBytecodeHash(bytecodeHash);
-
+      
       // Store in localStorage for later use
       localStorage.setItem('vanityDeployerAddress', vanityDeployer.address);
       localStorage.setItem('bytecodeHash', bytecodeHash);
@@ -320,11 +321,11 @@ export default function VanityFinderPage() {
       localStorage.setItem('tokenSymbol', tokenSymbol);
       localStorage.setItem('tokenDecimals', tokenDecimals.toString());
       localStorage.setItem('tokenSupply', tokenSupply);
-
+      
       // Move to the next step
       // setCurrentStep(1);
       // setIsProcessing(false);
-
+      
     } catch (error: Error | unknown) {
       console.error("Error deploying VanityContractDeployer:", error);
       setIsError(true);
@@ -332,21 +333,22 @@ export default function VanityFinderPage() {
       setIsProcessing(false);
     }
   }
-
+  
   // Step 2: Find a salt value that will generate a contract address with the desired suffix
   async function findSalt() {
     setIsSearching(true);
     setErrorMessage("");
-
+    
     try {
       // Get the stored values
+      console.log("suffix", targetSuffix, "vanityDeployerAddress", vanityDeployerAddress, "bytecodeHash", bytecodeHash);
       const storedVanityDeployerAddress = localStorage.getItem('vanityDeployerAddress') || vanityDeployerAddress;
       const storedBytecodeHash = localStorage.getItem('bytecodeHash') || bytecodeHash;
-
+      
       if (!storedVanityDeployerAddress || !storedBytecodeHash) {
         throw new Error("VanityContractDeployer address or bytecode hash not found. Please complete step 1 first.");
       }
-
+      
       // Start the salt search
       const response = await fetch('/api/search-salt', {
         method: 'POST',
@@ -369,16 +371,16 @@ export default function VanityFinderPage() {
       const data = await response.json();
       console.log("Search started:", data);
       // setSearchId(data.searchId);
-
+      
       // Poll for results
       const pollInterval = setInterval(async () => {
         try {
           const pollResponse = await fetch(`/api/search-salt?id=${data.searchId}`);
-
+          
           if (!pollResponse.ok) {
             throw new Error(`HTTP error! status: ${pollResponse.status}`);
           }
-
+          
           const pollData = await pollResponse.json();
           console.log("Poll response:", pollData);
 
@@ -396,7 +398,7 @@ export default function VanityFinderPage() {
                 address: pollData.address,
                 deployerAddress: pollData.deployerAddress
               });
-
+              
               // Move to the next step
               setCurrentStep(2);
             } else {
@@ -414,7 +416,7 @@ export default function VanityFinderPage() {
           // Don't clear the interval on network errors - keep trying
         }
       }, 2000); // Poll every 2 seconds
-
+      
     } catch (error: Error | unknown) {
       console.error("Error starting salt search:", error);
       setIsSearching(false);
@@ -422,7 +424,7 @@ export default function VanityFinderPage() {
       setErrorMessage(error instanceof Error ? error.message : "Failed to start salt search");
     }
   }
-
+  
   // Step 3: Deploy the token contract using the found salt
   async function deployContract() {
     // setIsProcessing(true);
@@ -430,7 +432,7 @@ export default function VanityFinderPage() {
 
     const storedSalt = localStorage.getItem('salt');
     const storedVanityDeployerAddress = localStorage.getItem('vanityDeployerAddress') || vanityDeployerAddress;
-
+    
     if (!storedSalt) {
       setErrorMessage("Salt value not found. Please complete the salt search first.");
       setIsProcessing(false);
@@ -451,15 +453,15 @@ export default function VanityFinderPage() {
       setIsError(true);
       return;
     }
-
+    
     try {
       const provider = new ethers.providers.Web3Provider(window.ethereum);
-
+      
       await provider.send("eth_requestAccounts", []);
       const signer = provider.getSigner();
       const address = await signer.getAddress();
       console.log("Deploying with account:", address);
-
+      
       // Connect to the VanityContractDeployer
       const vanityDeployer = new ethers.Contract(
         storedVanityDeployerAddress,
@@ -470,31 +472,31 @@ export default function VanityFinderPage() {
 
       console.log("VanityDeployer address:", vanityDeployer.address);
       console.log("Deploying with salt:", storedSalt);
-
+      
       try {
         // Estimate gas for the deployment
         const gasEstimate = await vanityDeployer.estimateGas.deployWithSalt(storedSalt);
         console.log("Estimated gas:", gasEstimate.toString());
-
+        
         const gasLimit = gasEstimate.mul(120).div(100); // Add 20% buffer
-
+        
         // Send the transaction
         const tx = await vanityDeployer.deployWithSalt(storedSalt, {
           gasLimit: gasLimit,
         });
-
+        
         console.log("Transaction hash:", tx.hash);
         setTxnHash(tx.hash);
-
+        
         // Wait for the transaction to be mined
         const receipt = await tx.wait();
         console.log("Transaction receipt:", receipt);
-
+        
         // Find the deployment event
         const deployedEvent = receipt.events?.find((e: { event: string }) => {
           return e.event === "TargetContractDeployed";
         });
-
+        
         if (!deployedEvent) {
           // Try to find by topic if event name isn't available
           const eventByTopic = receipt.events[0]
@@ -502,13 +504,13 @@ export default function VanityFinderPage() {
           if (!eventByTopic) {
             throw new Error("Deployment event not found in transaction receipt");
           }
-
+          
           // Extract address from data
           const deployedTokenAddress = eventByTopic.address;
 
           console.log("\n✅ SUCCESS! Token deployed with vanity address:");
           console.log(`   ${deployedTokenAddress}`);
-
+          
           // Update state with the deployed token address
           setTokenAddress(deployedTokenAddress.toLowerCase());
           // setDeployerAddress(address);
@@ -516,24 +518,24 @@ export default function VanityFinderPage() {
         } else {
           // Extract address from event args
           const deployedTokenAddress = deployedEvent.args.deployedAddress;
-
+          
           console.log("\n✅ SUCCESS! Token deployed with vanity address:");
           console.log(`   ${deployedTokenAddress}`);
-
+          
           // Update state with the deployed token address
           setTokenAddress(deployedTokenAddress.toLowerCase());
           // setDeployerAddress(address);
           setIsSuccess(true);
         }
-
+        
         // Connect to the deployed token
         const winkToken = new ethers.Contract(tokenAddress, WinkTokenABI, signer);
-
+        
         // Try to read token details with retries
         let attempts = 0;
         const maxAttempts = 5;
         const delayBetweenAttempts = 3000; // 3 seconds
-
+        
         while (attempts < maxAttempts) {
           try {
             const [name, symbol, decimals, totalSupply, ownerBalance] = await Promise.all([
@@ -543,20 +545,20 @@ export default function VanityFinderPage() {
               winkToken.totalSupply(),
               winkToken.balanceOf(address)
             ]);
-
+            
             console.log("\nToken Details:");
             console.log(`- Name: ${name}`);
             console.log(`- Symbol: ${symbol}`);
             console.log(`- Decimals: ${decimals}`);
             console.log(`- Total Supply: ${ethers.utils.formatUnits(totalSupply, decimals)}`);
             console.log(`- Owner Balance: ${ethers.utils.formatUnits(ownerBalance, decimals)}`);
-
+            
             // Successfully read token details
             break;
           } catch (error) {
             console.log(`Attempt ${attempts + 1}/${maxAttempts} to read token details failed. Retrying... due to ${error}`);
             attempts++;
-
+            
             if (attempts >= maxAttempts) {
               console.error("Failed to read token details after multiple attempts");
             } else {
@@ -564,59 +566,59 @@ export default function VanityFinderPage() {
             }
           }
         }
-
+        
       } catch (estimateError) {
         console.error("Gas estimation failed:", estimateError);
-
+        
         // Fallback to manual gas limit if estimation fails
         console.log("Attempting deployment with manual gas limit...");
         const tx = await vanityDeployer.deployWithSalt(storedSalt, {
           gasLimit: 3000000, // Manual gas limit
         });
-
+        
         console.log("Transaction hash:", tx.hash);
         setTxnHash(tx.hash);
-
+        
         const receipt = await tx.wait();
-
+        
         // Find the deployment event
         const deployedEvent = receipt.events?.find((e: { event: string }) => {
           return e.event === "TargetContractDeployed";
         });
-
+        
         if (!deployedEvent) {
           // Try to find by topic if event name isn't available
           const eventByTopic = receipt.events?.find((e: { topics?: string[] }) => {
             return e.topics && e.topics[0] === "0x5c2cf7b115a5d943fa11d730c947a439f2895d25576349163d4c5e7d3c3f2abc";
           });
-
+          
           if (!eventByTopic) {
             throw new Error("Deployment event not found in transaction receipt");
           }
-
+          
           // Extract address from data
           const data = eventByTopic.data;
           const deployedTokenAddress = ethers.utils.getAddress("0x" + data.slice(-40));
-
+          
           console.log("\n✅ SUCCESS! Token deployed with vanity address:");
           console.log(`   ${deployedTokenAddress}`);
-
+          
           setTokenAddress(deployedTokenAddress);
-          //     setDeployerAddress(address);
+     //     setDeployerAddress(address);
           setIsSuccess(true);
         } else {
           // Extract address from event args
           const deployedTokenAddress = deployedEvent.args.deployedAddress;
-
+          
           console.log("\n✅ SUCCESS! Token deployed with vanity address:");
           console.log(`   ${deployedTokenAddress}`);
-
+          
           setTokenAddress(deployedTokenAddress);
-          //    setDeployerAddress(address);
+      //    setDeployerAddress(address);
           setIsSuccess(true);
         }
       }
-
+      
     } catch (error: Error | unknown) {
       console.error("Error deploying contract:", error);
       setIsError(true);
@@ -628,7 +630,7 @@ export default function VanityFinderPage() {
 
   return (
     <div className="min-h-screen flex justify-center items-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <section className="w-5xl max-w-5xl mx-auto">
+      <section className="w-4xl max-w-4xl mx-auto">
         <div className="text-center mb-8 mt-10">
           <h1 className="text-3xl font-extrabold text-gray-900 sm:text-4xl wendy-font">
             Vanity Address Generator
