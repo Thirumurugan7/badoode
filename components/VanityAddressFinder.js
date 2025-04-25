@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 
 export default function VanityAddressFinder() {
   const [targetSuffix, setTargetSuffix] = useState('b00b5');

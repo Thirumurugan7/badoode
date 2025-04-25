@@ -432,23 +432,21 @@ export default function VanityFinderPage() {
         
         if (!deployedEvent) {
           // Try to find by topic if event name isn't available
-          const eventByTopic = receipt.events?.find((e: any) => {
-            return e.topics && e.topics[0] === "0x5c2cf7b115a5d943fa11d730c947a439f2895d25576349163d4c5e7d3c3f2abc";
-          });
-          
+          const eventByTopic = receipt.events[0]
+          console.log("Event by topic:", eventByTopic);
           if (!eventByTopic) {
             throw new Error("Deployment event not found in transaction receipt");
           }
           
           // Extract address from data
-          const data = eventByTopic.data;
-          const deployedTokenAddress = ethers.utils.getAddress("0x" + data.slice(-40));
-          
+          const data = eventByTopic;
+          const deployedTokenAddress = eventByTopic.address;
+
           console.log("\n✅ SUCCESS! Token deployed with vanity address:");
           console.log(`   ${deployedTokenAddress}`);
           
           // Update state with the deployed token address
-          setTokenAddress(deployedTokenAddress);
+          setTokenAddress(deployedTokenAddress.toLowerCase());
           setDeployerAddress(address);
           setIsSuccess(true);
         } else {
@@ -459,7 +457,7 @@ export default function VanityFinderPage() {
           console.log(`   ${deployedTokenAddress}`);
           
           // Update state with the deployed token address
-          setTokenAddress(deployedTokenAddress);
+          setTokenAddress(deployedTokenAddress.toLowerCase());
           setDeployerAddress(address);
           setIsSuccess(true);
         }
@@ -567,7 +565,7 @@ export default function VanityFinderPage() {
   return (
     <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <section className="max-w-4xl mx-auto">
-        <div className="text-center mb-8">
+        <div className="text-center mb-8 mt-10">
           <h1 className="text-3xl font-extrabold text-gray-900 sm:text-4xl wendy-font">
             Vanity Address Generator
           </h1>
@@ -596,7 +594,7 @@ export default function VanityFinderPage() {
                   </div>
                   <div className="flex space-x-4">
                     <a
-                      href={`https://sepolia.basescan.org/address/${tokenAddress}`}
+                      href={`https://sepolia.etherscan.io/address/${tokenAddress}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="flex-1 bg-[#10ad71] hover:bg-[#0d8a5a] text-white py-2 px-4 rounded-md text-sm font-medium"
@@ -604,7 +602,7 @@ export default function VanityFinderPage() {
                       View on Explorer
                     </a>
                     <a
-                      href={`https://sepolia.basescan.org/tx/${txnHash}`}
+                      href={`https://sepolia.etherscan.io/tx/${txnHash}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 py-2 px-4 rounded-md text-sm font-medium"
