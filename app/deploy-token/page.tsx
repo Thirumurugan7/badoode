@@ -1,9 +1,10 @@
 'use client';
 
-import {  CheckCircle2,  XCircle, Loader2 } from "lucide-react";
+import { CheckCircle2, XCircle, Loader2 } from "lucide-react";
 import { Card } from '@/components/ui/card';
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
+import { useAccount } from "wagmi";
 
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
@@ -19,7 +20,7 @@ type SearchResult = {
   deployerAddress: string;
 } | null;
 
-const TokenFactoryABI =[
+const TokenFactoryABI = [
   {
     "inputs": [
       {
@@ -147,11 +148,11 @@ const WinkTokenABI = [
 
 export default function VanityFinderPage() {
   const [currentStep, setCurrentStep] = useState(0);
-  const [tokenName, setTokenName] = useState("BASE Token");
-  const [tokenSymbol, setTokenSymbol] = useState("BASE");
+  const [tokenName, setTokenName] = useState("");
+  const [tokenSymbol, setTokenSymbol] = useState("");
   // const [tokenDecimals, setTokenDecimals] = useState(18);
   const [tokenSupply, setTokenSupply] = useState("1000000");
-  const [targetSuffix, setTargetSuffix] = useState("b00b5");
+  const [targetSuffix, setTargetSuffix] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [isError, setIsError] = useState(false);
@@ -165,12 +166,85 @@ export default function VanityFinderPage() {
   const [searchResult, setSearchResult] = useState<SearchResult>(null);
   const [isSearching, setIsSearching] = useState(false);
   // const [searchId, setSearchId] = useState<string | null>(null);
+  const [suggestion, setSuggestion] = useState<string[]>([]);
+
+  const [currentOperation, setCurrentOperation] = useState("");
+
+
+  const handleDeploy = async () => {
+    if (!tokenName || !tokenSymbol || !tokenSupply) {
+      alert("Please fill in all token details to proceed.");
+      return;
+    }
+
+    setIsProcessing(true);
+    setIsProcessing(true);
+
+    try {
+      // Step 1: Deploy VanityContractDeployer
+      setCurrentOperation("Deploying VanityContractDeployer...");
+      const deploySuccess = await deployVanityDeployer();
+      // if (!deploySuccess) return;
+
+      // Step 2: Find Salt
+      setCurrentOperation("Searching for vanity address...");
+      const saltFound = await findSalt();
+      // if (!saltFound) return;
+
+      // Step 3: Deploy Contract
+      setCurrentOperation("Deploying token contract...");
+     
+
+    } catch (error) {
+      console.error("Deployment process failed:", error);
+      setIsError(true);
+      setIsProcessing(false);
+      setErrorMessage(error instanceof Error ? error.message : "Deployment process failed");
+    } finally {
+      setIsProcessing(false);
+      setCurrentOperation("");
+    }
+  };
+
 
   const tokenDecimals = 18;
 
+  const { isConnected } = useAccount();
+
+  const isHexadecimal = (str: string) => /^[0-9a-fA-F]+$/.test(str);
+
+  // Improved input handling with async/await
+  const handleSuffixChange = (value: string) => {
+    setTargetSuffix(value);
+
+    if (!isHexadecimal(value)) {
+      const fallbackSuggestions = generateFallbackSuggestions(value, 4); // Generate 4 suggestions
+      setSuggestion(fallbackSuggestions);
+    } else {
+      setSuggestion([]); // Clear suggestions for valid input
+    }
+  };
+
+  const generateFallbackSuggestions = (input: string, count: number = 3) => {
+    const hexChars = "0123456789abcdef";
+
+    const generateSingleSuggestion = () =>
+      input
+        .split("")
+        .map((char) =>
+          hexChars.includes(char.toLowerCase())
+            ? char
+            : hexChars[Math.floor(Math.random() * 16)]
+        )
+        .join("")
+        .toLowerCase();
+
+    return Array.from({ length: count }, generateSingleSuggestion);
+  };
+
   // Step 1: Deploy VanityContractDeployer with token bytecode
   async function deployVanityDeployer() {
-    setIsProcessing(true);
+    // setIsProcessing(true);
     setErrorMessage("");
 
     if (!window.ethereum) {
@@ -249,8 +323,8 @@ export default function VanityFinderPage() {
       localStorage.setItem('tokenSupply', tokenSupply);
       
       // Move to the next step
-      setCurrentStep(1);
-      setIsProcessing(false);
+      // setCurrentStep(1);
+      // setIsProcessing(false);
       
     } catch (error: Error | unknown) {
       console.error("Error deploying VanityContractDeployer:", error);
@@ -264,9 +338,12 @@ export default function VanityFinderPage() {
   async function findSalt() {
     setIsSearching(true);
     setErrorMessage("");
+    setIsProcessing(true);
+
     
     try {
       // Get the stored values
+      console.log("suffix", targetSuffix, "vanityDeployerAddress", vanityDeployerAddress, "bytecodeHash", bytecodeHash);
       const storedVanityDeployerAddress = localStorage.getItem('vanityDeployerAddress') || vanityDeployerAddress;
       const storedBytecodeHash = localStorage.getItem('bytecodeHash') || bytecodeHash;
       
@@ -325,7 +402,8 @@ export default function VanityFinderPage() {
               });
               
               // Move to the next step
-              setCurrentStep(2);
+              // setCurrentStep(2);
+              await deployContract();
             } else {
               setErrorMessage(pollData.message || 'Search completed without finding a matching salt');
               setIsError(true);
@@ -352,11 +430,12 @@ export default function VanityFinderPage() {
   
   // Step 3: Deploy the token contract using the found salt
   async function deployContract() {
-    setIsProcessing(true);
+    // setIsProcessing(true);
     setErrorMessage("");
-
+console.log("executing deploycontract")
     const storedSalt = localStorage.getItem('salt');
     const storedVanityDeployerAddress = localStorage.getItem('vanityDeployerAddress') || vanityDeployerAddress;
+    console.log("storedSalt", storedSalt, "storedVanityDeployerAddress", storedVanityDeployerAddress);
     
     if (!storedSalt) {
       setErrorMessage("Salt value not found. Please complete the salt search first.");
@@ -554,8 +633,8 @@ export default function VanityFinderPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <section className="max-w-4xl mx-auto">
+    <div className="min-h-screen flex justify-center items-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+      <section className="w-4xl max-w-4xl mx-auto">
         <div className="text-center mb-8 mt-10">
           <h1 className="text-3xl font-extrabold text-gray-900 sm:text-4xl wendy-font">
             Vanity Address Generator
@@ -628,21 +707,19 @@ export default function VanityFinderPage() {
               <>
                 <div className="mb-6">
                   <div className="flex items-center justify-between mb-4">
-                    {["Token Setup", "Find Salt", "Deploy Token"].map((step, index) => (
+                    {["Token contract suffix", "Find Salt and Deploy Token"].map((step, index) => (
                       <div
                         key={index}
-                        className={`flex items-center ${
-                          index <= currentStep
+                        className={`flex items-center ${index <= currentStep
                             ? "text-[#10ad71]"
                             : "text-gray-400"
-                        }`}
+                          }`}
                       >
                         <div
-                          className={`w-8 h-8 rounded-full flex items-center justify-center mr-2 ${
-                            index <= currentStep
+                          className={`w-8 h-8 rounded-full flex items-center justify-center mr-2 ${index <= currentStep
                               ? "bg-[#10ad71] text-white"
                               : "bg-gray-200 text-gray-500"
-                          }`}
+                            }`}
                         >
                           {index + 1}
                         </div>
@@ -663,7 +740,234 @@ export default function VanityFinderPage() {
 
                 {/* Step 1: Token Setup */}
                 {currentStep === 0 && (
+                  // <motion.div
+                  //   initial={{ opacity: 0, x: -20 }}
+                  //   animate={{ opacity: 1, x: 0 }}
+                  //   className="space-y-3"
+                  // >
+                  //   <div className="space-y-4">
+                  //     <div>
+                  //       <label
+                  //         htmlFor="tokenName"
+                  //         className="block text-sm font-medium text-gray-700 mb-1"
+                  //       >
+                  //         Token Name
+                  //       </label>
+                  //       <Input
+                  //         id="tokenName"
+                  //         value={tokenName}
+                  //         onChange={(e) => setTokenName(e.target.value)}
+                  //         placeholder="e.g. BASE Token"
+                  //         className="bg-white border-gray-300 text-gray-900"
+                  //         disabled={isProcessing}
+                  //       />
+                  //     </div>
+                  //     <div>
+                  //       <label
+                  //         htmlFor="tokenSymbol"
+                  //         className="block text-sm font-medium text-gray-700 mb-1"
+                  //       >
+                  //         Token Symbol
+                  //       </label>
+                  //       <Input
+                  //         id="tokenSymbol"
+                  //         value={tokenSymbol}
+                  //         onChange={(e) => setTokenSymbol(e.target.value)}
+                  //         placeholder="e.g. BASE"
+                  //         className="bg-white border-gray-300 text-gray-900"
+                  //         disabled={isProcessing}
+                  //       />
+                  //     </div>
+                  //     <div>
+                  //       <label
+                  //         htmlFor="tokenSupply"
+                  //         className="block text-sm font-medium text-gray-700 mb-1"
+                  //       >
+                  //         Token Supply
+                  //       </label>
+                  //       <Input
+                  //         id="tokenSupply"
+                  //         value={tokenSupply}
+                  //         onChange={(e) => setTokenSupply(e.target.value)}
+                  //         placeholder="e.g. 1000000"
+                  //         className="bg-white border-gray-300 text-gray-900"
+                  //         disabled={isProcessing}
+                  //       />
+                  //     </div>
+                  //   </div>
+                  //   <Button
+                  //     onClick={deployVanityDeployer}
+                  //     disabled={!tokenName || !tokenSymbol || !tokenSupply || isProcessing}
+                  //     className="w-full bg-[#10ad71] hover:bg-[#0d8a5a] text-white"
+                  //   >
+                  //     {isProcessing ? (
+                  //       <div className="flex items-center justify-center gap-2">
+                  //         <Loader2 className="h-4 w-4 animate-spin" />
+                  //         <span>Deploying...</span>
+                  //       </div>
+                  //     ) : (
+                  //       'Deploy VanityContractDeployer'
+                  //     )}
+                  //   </Button>
+                  // </motion.div>
                   <motion.div
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    className="space-y-3"
+                  >
+                    <div className="relative">
+                      <label
+                        htmlFor="contractSuffix"
+                        className="block text-sm font-medium text-gray-700 mb-1"
+                      >
+                        Token Address Suffix
+                      </label>
+                      <Input
+                        id="targetSuffix"
+                        value={targetSuffix}
+                          onChange={(e) => handleSuffixChange(e.target.value)}
+                        placeholder="e.g. b00b5"
+                        className="bg-white border-gray-300 text-gray-900"
+                        disabled={isSearching}
+                      />
+
+                      {targetSuffix && !isHexadecimal(targetSuffix) && (
+                        <div className="absolute z-10 mt-1 w-full rounded-md bg-white border border-gray-200 shadow-lg">
+                          <div className="p-2 space-y-2">
+                            <div className="flex items-center justify-between px-2 py-1 text-red-500">
+                              <span className="font-mono">
+                                {targetSuffix}
+                              </span>
+                              <span className="text-sm">Not available</span>
+                            </div>
+
+                            <div className="space-y-1">
+                              {suggestion.map((suggestion, index) => (
+                                <div
+                                  key={index}
+                                  className="flex items-center justify-between px-3 py-2 cursor-pointer hover:bg-gray-50 transition-colors"
+                                  onClick={() =>
+                                    setTargetSuffix(suggestion)
+                                  }
+                                >
+                                  <span className="font-mono text-gray-900">
+                                    {suggestion}
+                                  </span>
+                                  <span className="ml-2 text-xs text-[#10ad71]">
+                                    Available
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      <p className="mt-1 text-xs text-gray-500">
+                        This will be appended to your token address for
+                        easy identification
+                      </p>
+                    </div>
+
+                    <Button
+                      onClick={() => setCurrentStep(1)}
+                      className="w-full bg-[#10ad71] hover:bg-[#0d8a5a] text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                      disabled={
+                        !targetSuffix ||
+                        !isHexadecimal(targetSuffix) ||
+                        isSearching ||
+                        !isConnected
+                      }
+                    >
+                      {isConnected ? (
+                        <>
+                            Next Step
+                        </>
+                      ) : (
+                        "Connect Wallet"
+                      )}
+                    </Button>
+                    {isSearching && (
+                      <p className="mt-2 text-xs text-gray-500 text-center">
+                        Please wait while we search for a vanity address. This might take up to 5 minutes.
+                      </p>
+                    )}
+                  </motion.div>
+                )}
+
+                {/* Step 2: Find Salt */}
+                {currentStep === 1 && (
+                  // <motion.div
+                  //   initial={{ opacity: 0, x: -20 }}
+                  //   animate={{ opacity: 1, x: 0 }}
+                  //   className="space-y-6"
+                  // >
+                  //   <div className="space-y-4">
+                  //     <div>
+                  //       <label
+                  //         htmlFor="targetSuffix"
+                  //         className="block text-sm font-medium text-gray-700 mb-1"
+                  //       >
+                  //         Target Address Suffix
+                  //       </label>
+                  //       <Input
+                  //         id="targetSuffix"
+                  //         value={targetSuffix}
+                  //         onChange={(e) => setTargetSuffix(e.target.value)}
+                  //         placeholder="e.g. b00b5"
+                  //         className="bg-white border-gray-300 text-gray-900"
+                  //         disabled={isSearching}
+                  //       />
+                  //       {targetSuffix && !/^[0-9a-fA-F]+$/.test(targetSuffix) && (
+                  //         <p className="mt-1 text-xs text-red-500">
+                  //           Suffix must be a valid hexadecimal value (0-9, a-f)
+                  //         </p>
+                  //       )}
+                  //     </div>
+                  //   </div>
+                  //   <Button
+                  //     onClick={findSalt}
+                  //     disabled={isSearching || !targetSuffix || !/^[0-9a-fA-F]+$/.test(targetSuffix)}
+                  //     className="w-full bg-[#10ad71] hover:bg-[#0d8a5a] text-white"
+                  //   >
+                  //     {isSearching ? (
+                  //       <div className="flex items-center justify-center gap-2">
+                  //         <Loader2 className="h-4 w-4 animate-spin" />
+                  //         <span>Searching for salt...</span>
+                  //       </div>
+                  //     ) : (
+                  //       'Find Salt Value'
+                  //     )}
+                  //   </Button>
+
+                  //   {isSearching && (
+                  //     <div className="mt-2 text-sm text-gray-600">
+                  //       <p>Searching for an address ending with: {targetSuffix}</p>
+                  //       <p>This may take several minutes. Please be patient.</p>
+                  //     </div>
+                  //   )}
+
+                  //   {searchResult && searchResult.success && (
+                  //     <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-md">
+                  //       <h4 className="text-green-800 font-medium mb-2">Salt Found!</h4>
+                  //       <p className="text-green-700 mb-1">Salt value: {searchResult.salt}</p>
+                  //       <p className="text-green-700 mb-2">Predicted address: {searchResult.address}</p>
+                  //       <Button
+                  //         onClick={() => setCurrentStep(2)}
+                  //         className="w-full bg-[#10ad71] hover:bg-[#0d8a5a] text-white mt-2"
+                  //       >
+                  //         Continue to Deployment
+                  //       </Button>
+                  //     </div>
+                  //   )}
+
+                  //   {errorMessage && (
+                  //     <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-md text-red-600">
+                  //       {errorMessage}
+                  //     </div>
+                  //   )}
+                  // </motion.div>
+                   <motion.div
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
                     className="space-y-3"
@@ -719,134 +1023,40 @@ export default function VanityFinderPage() {
                       </div>
                     </div>
                     <Button
-                      onClick={deployVanityDeployer}
-                      disabled={!tokenName || !tokenSymbol || !tokenSupply || isProcessing}
-                      className="w-full bg-[#10ad71] hover:bg-[#0d8a5a] text-white"
-                    >
-                      {isProcessing ? (
-                        <div className="flex items-center justify-center gap-2">
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                          <span>Deploying...</span>
-                        </div>
-                      ) : (
-                        'Deploy VanityContractDeployer'
-                      )}
-                    </Button>
-                  </motion.div>
-                )}
-
-                {/* Step 2: Find Salt */}
-                {currentStep === 1 && (
-                  <motion.div
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    className="space-y-6"
-                  >
-                    <div className="space-y-4">
-                      <div>
-                        <label
-                          htmlFor="targetSuffix"
-                          className="block text-sm font-medium text-gray-700 mb-1"
-                        >
-                          Target Address Suffix
-                        </label>
-                        <Input
-                          id="targetSuffix"
-                          value={targetSuffix}
-                          onChange={(e) => setTargetSuffix(e.target.value)}
-                          placeholder="e.g. b00b5"
-                          className="bg-white border-gray-300 text-gray-900"
-                          disabled={isSearching}
-                        />
-                        {targetSuffix && !/^[0-9a-fA-F]+$/.test(targetSuffix) && (
-                          <p className="mt-1 text-xs text-red-500">
-                            Suffix must be a valid hexadecimal value (0-9, a-f)
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                    <Button
-                      onClick={findSalt}
-                      disabled={isSearching || !targetSuffix || !/^[0-9a-fA-F]+$/.test(targetSuffix)}
-                      className="w-full bg-[#10ad71] hover:bg-[#0d8a5a] text-white"
-                    >
-                      {isSearching ? (
-                        <div className="flex items-center justify-center gap-2">
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                          <span>Searching for salt...</span>
-                        </div>
-                      ) : (
-                        'Find Salt Value'
-                      )}
-                    </Button>
-                    
-                    {isSearching && (
-                      <div className="mt-2 text-sm text-gray-600">
-                        <p>Searching for an address ending with: {targetSuffix}</p>
-                        <p>This may take several minutes. Please be patient.</p>
-                      </div>
-                    )}
-                    
-                    {searchResult && searchResult.success && (
-                      <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-md">
-                        <h4 className="text-green-800 font-medium mb-2">Salt Found!</h4>
-                        <p className="text-green-700 mb-1">Salt value: {searchResult.salt}</p>
-                        <p className="text-green-700 mb-2">Predicted address: {searchResult.address}</p>
-                        <Button
-                          onClick={() => setCurrentStep(2)}
-                          className="w-full bg-[#10ad71] hover:bg-[#0d8a5a] text-white mt-2"
-                        >
-                          Continue to Deployment
-                        </Button>
-                      </div>
-                    )}
-                    
-                    {errorMessage && (
-                      <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-md text-red-600">
-                        {errorMessage}
-                      </div>
-                    )}
-                  </motion.div>
-                )}
-
-                {/* Step 3: Deploy Token */}
-                {currentStep === 2 && (
-                  <motion.div
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    className="space-y-6"
-                  >
-                    <div className="p-4 bg-blue-50 border border-blue-200 rounded-md mb-4">
-                      <h4 className="text-blue-800 font-medium mb-2">Ready to Deploy</h4>
-                      <p className="text-blue-700 mb-1">Token Name: {tokenName}</p>
-                      <p className="text-blue-700 mb-1">Token Symbol: {tokenSymbol}</p>
-                      <p className="text-blue-700 mb-1">Token Supply: {tokenSupply}</p>
-                      <p className="text-blue-700 mb-1">Target Suffix: {targetSuffix}</p>
-                      <p className="text-blue-700">Salt Value: {localStorage.getItem('salt')}</p>
-                    </div>
-                    
-                    <Button
-                      onClick={deployContract}
-                      disabled={isProcessing}
-                      className="w-full bg-[#10ad71] hover:bg-[#0d8a5a] text-white"
-                    >
-                      {isProcessing ? (
+                        onClick={handleDeploy}
+                        disabled={!tokenName || !tokenSymbol || !tokenSupply || isProcessing}
+                        className="w-full bg-[#10ad71] hover:bg-[#0d8a5a] text-white"
+                      > 
+                      { isProcessing ? (
                         <div className="flex items-center justify-center gap-2">
                           <Loader2 className="h-4 w-4 animate-spin" />
                           <span>Deploying Token...</span>
                         </div>
                       ) : (
-                        'Deploy Token with Vanity Address'
+                        "Deploy Token"
                       )}
-                    </Button>
-                    
-                    {errorMessage && (
-                      <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-md text-red-600">
-                        {errorMessage}
-                      </div>
-                    )}
+                      </Button>
                   </motion.div>
                 )}
+
+                
+                  {/* Processing Screen */}
+                  {isProcessing && (
+                    <div className="py-10 flex flex-col items-center justify-center space-y-6">
+                      <div className="relative">
+                        <div className="w-20 h-20 border-4 border-gray-200 rounded-full"></div>
+                        <div className="absolute top-0 left-0 w-20 h-20 border-t-4 border-[#10ad71] rounded-full animate-spin"></div>
+                      </div>
+                      <div className="text-center">
+                        <h3 className="text-xl font-semibold text-gray-900 mb-2 wendy-font">
+                          {currentOperation}
+                        </h3>
+                        <p className="text-gray-600">
+                          Please wait while we process your request, this might take up to 2 minutes
+                        </p>
+                      </div>
+                    </div>
+                  )}
               </>
             )}
           </Card>

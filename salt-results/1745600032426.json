@@ -1,0 +1,10 @@
+{
+  "searchId": "1745600032426",
+  "success": false,
+  "status": "error",
+  "message": "Search failed: error: ENOENT reading \"/home/vishal/badoode/salt-workers/worker-1745600032426.js\"",
+  "searchedRange": {
+    "startSalt": 0,
+    "endSalt": 100000000
+  }
+}
