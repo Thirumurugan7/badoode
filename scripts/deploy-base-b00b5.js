@@ -1,28 +1,43 @@
 
-  // deploy-with-salt.js
+  // deploy-base-b00b5.js
   const { ethers } = require("hardhat");
   
   async function main() {
     const [deployer] = await ethers.getSigners();
     console.log("Deploying with account:", deployer.address);
     
-    // Connect to the previously deployed VanityContractDeployer
+    // Connect to the VanityContractDeployer for this specific token
     const vanityDeployer = await ethers.getContractAt(
       "VanityContractDeployer", 
       "0x5c46E63Bc046Fe1109fAEaEC1A6089236DF463C7"
     );
     
     // Deploy with the found salt
-    console.log("Deploying with salt: 8623");
-    const tx = await vanityDeployer.deployWithSalt(8623);
+    console.log("\nDeploying token with salt: 274859");
+    console.log("- Name: BASE Token");
+    console.log("- Symbol: BASE");
+    console.log("- Decimals: 18");
+    console.log("- Supply: 1000000");
+    
+    const tx = await vanityDeployer.deployWithSalt(274859);
+    console.log("Transaction hash:", tx.hash);
+    console.log("Waiting for transaction confirmation...");
     const receipt = await tx.wait();
     
     // Get the deployed token address from the event
     const deployedEvent = receipt.events.find(e => e.event === "TargetContractDeployed");
     const tokenAddress = deployedEvent.args.deployedAddress;
     
-    console.log("\n✅ SUCCESS! Token deployed with vanity address:");
+    console.log("\n✅ SUCCESS! Token deployed with address:");
     console.log(`   ${tokenAddress}`);
+    
+    // Verify the address ends with our target suffix
+    if (tokenAddress.toLowerCase().endsWith("b00b5")) {
+      console.log("✅ Address correctly ends with: b00b5");
+    } else {
+      console.log("❌ WARNING: Address does NOT end with: b00b5");
+      console.log("   This suggests an inconsistency in the CREATE2 implementation.");
+    }
     
     // Connect to the deployed token
     const WinkToken = await ethers.getContractFactory("WinkToken");
@@ -42,8 +57,8 @@
     console.log(`- Total Supply: ${ethers.utils.formatUnits(totalSupply, decimals)}`);
     console.log(`- Owner Balance: ${ethers.utils.formatUnits(ownerBalance, decimals)}`);
     
-    console.log("\nGoerli Explorer Link:");
-    console.log(`https://goerli.etherscan.io/address/${tokenAddress}`);
+    console.log("\nExplorer Link:");
+    console.log(`https://sepolia.basescan.org/address/${tokenAddress}`);
   }
   
   main()

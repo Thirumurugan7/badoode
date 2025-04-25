@@ -1,0 +1,10 @@
+{
+  "searchId": "1745576039417",
+  "success": false,
+  "status": "timeout",
+  "message": "Search timed out after 5 minutes",
+  "searchedRange": {
+    "startSalt": 0,
+    "endSalt": 100000000
+  }
+}

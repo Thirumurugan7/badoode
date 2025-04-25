@@ -1,0 +1,10 @@
+{
+  "salt": 3984369,
+  "tokenName": "BASE Token",
+  "tokenSymbol": " BASE",
+  "tokenDecimals": 18,
+  "tokenSupply": "1000000",
+  "vanityDeployerAddress": "0x5c46E63Bc046Fe1109fAEaEC1A6089236DF463C7",
+  "bytecodeHash": "0xfdac7e7671aa51d6411fa89c76f4951e07966e438c23782b4b78408722640925",
+  "predictedAddress": "0x6B5AF43449DDE0211d1eD52e6956D6D883Bb00B2"
+}

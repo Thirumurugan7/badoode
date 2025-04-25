@@ -5,7 +5,7 @@ import {
   RainbowKitProvider,
 } from '@rainbow-me/rainbowkit';
 import { WagmiProvider } from 'wagmi';
-import { baseSepolia } from 'wagmi/chains';
+import { sepolia } from 'wagmi/chains';
 import {
   QueryClientProvider,
   QueryClient,
@@ -15,7 +15,7 @@ import { MainNav } from "@/components/ui/navbar";
 const config = getDefaultConfig({
   appName: 'My RainbowKit App',
   projectId: 'YOUR_PROJECT_ID',
-  chains: [baseSepolia],
+  chains: [sepolia],
   ssr: false,
 });
 
