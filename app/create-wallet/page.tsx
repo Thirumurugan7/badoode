@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
-import { Rocket, CheckCircle2, ArrowRight, XCircle, Loader2, Wallet } from "lucide-react";
+import {  CheckCircle2,  XCircle,  Wallet } from "lucide-react";
 import { motion } from "framer-motion";
 import { useAccount, usePublicClient, useWriteContract } from "wagmi";
 import { sepolia } from "wagmi/chains";

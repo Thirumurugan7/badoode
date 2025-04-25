@@ -116,10 +116,9 @@ export default function DeployPage() {
 
       console.log("Receipt:", JSON.stringify(receipt, null, 2));
       
-      const deployedEvent = receipt.events?.find((e: any) => {
+      const deployedEvent = receipt.events?.find((e: {topics?: string[]}) => {
         return e.topics && e.topics[0] === "0x5c2cf7b115a5d943fa11d730c947a439f2895d25576349163d4c5e7d3c3f2abc";
       });
-      
       if (!deployedEvent) {
         throw new Error("Deployment event not found in transaction receipt");
       }

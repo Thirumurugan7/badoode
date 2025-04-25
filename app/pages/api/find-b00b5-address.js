@@ -1,9 +1,7 @@
-import { ethers } from "ethers";
 import { Worker } from "worker_threads";
 import fs from "fs";
 import os from "os";
 import path from "path";
-import { execSync } from "child_process";
 
 // Number of CPU cores to use
 const numCPUs = Math.max(1, os.cpus().length - 1); // Leave one core free for system
@@ -57,10 +55,9 @@ async function findVanityAddress(targetSuffix, maxBatches, batchSize) {
   let currentBatch = 1;
   let activeWorkers = 0;
   let foundSalt = null;
-  let foundAddress = null;
   
   // Create a promise that will resolve when a salt is found or all batches are searched
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve) => {
     // Function to create and launch a worker
     function launchWorker(workerId) {
       if (currentBatch >= maxBatches || foundSalt !== null) {
@@ -104,7 +101,7 @@ async function findVanityAddress(targetSuffix, maxBatches, batchSize) {
               console.log(`No matching salt found after searching ${currentBatch * batchSize} salts.`);
               
               // Clean up the worker file
-              try { fs.unlinkSync(workerFilePath); } catch (e) {}
+              try { fs.unlinkSync(workerFilePath); } catch (e ) { console.log(e); }
               
               resolve({
                 success: false,
@@ -135,7 +132,7 @@ async function findVanityAddress(targetSuffix, maxBatches, batchSize) {
           createDeploymentScript(contractInfo, message.salt);
           
           // Clean up the worker file
-          try { fs.unlinkSync(workerFilePath); } catch (e) {}
+          try { fs.unlinkSync(workerFilePath); } catch (e) { console.log(e); }
           
           // Resolve the promise with the found salt
           resolve({
@@ -162,7 +159,7 @@ async function findVanityAddress(targetSuffix, maxBatches, batchSize) {
           // If all workers are done, resolve the promise
           if (activeWorkers === 0) {
             // Clean up the worker file
-            try { fs.unlinkSync(workerFilePath); } catch (e) {}
+            try { fs.unlinkSync(workerFilePath); } catch (e ) { console.log(e); }
             
             resolve({
               success: false,

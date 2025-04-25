@@ -1,18 +1,14 @@
 'use client';
 
-import { Rocket, CheckCircle2, ArrowRight, XCircle, Loader2 } from "lucide-react";
+import {  CheckCircle2,  XCircle, Loader2 } from "lucide-react";
 import { Card } from '@/components/ui/card';
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
-import { useAccount, usePublicClient, useWriteContract } from "wagmi";
-import { sepolia } from "wagmi/chains";
-import { parseEther } from "viem";
-import { useState, useEffect } from "react";
+
+import { useState } from "react";
 import { Input } from "@/components/ui/input";
-import ContractABI from "@/app/purchaseSuffix.json";
 
 import { ethers } from "ethers";
-import Deploy from "../comp/deploy";
 
 // Add proper type for the result state
 type SearchResult = {
@@ -153,28 +149,28 @@ export default function VanityFinderPage() {
   const [currentStep, setCurrentStep] = useState(0);
   const [tokenName, setTokenName] = useState("BASE Token");
   const [tokenSymbol, setTokenSymbol] = useState("BASE");
-  const [tokenDecimals, setTokenDecimals] = useState(18);
+  // const [tokenDecimals, setTokenDecimals] = useState(18);
   const [tokenSupply, setTokenSupply] = useState("1000000");
   const [targetSuffix, setTargetSuffix] = useState("b00b5");
-  const [contractSuffix, setContractSuffix] = useState<string>("");
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [isError, setIsError] = useState(false);
-  const [error, setError] = useState<Error | null>(null);
+
   const [errorMessage, setErrorMessage] = useState("");
   const [tokenAddress, setTokenAddress] = useState("");
-  const [deployerAddress, setDeployerAddress] = useState("");
+  // const [deployerAddress, setDeployerAddress] = useState("");
   const [txnHash, setTxnHash] = useState("");
   const [vanityDeployerAddress, setVanityDeployerAddress] = useState("");
   const [bytecodeHash, setBytecodeHash] = useState("");
   const [searchResult, setSearchResult] = useState<SearchResult>(null);
   const [isSearching, setIsSearching] = useState(false);
-  const [searchId, setSearchId] = useState<string | null>(null);
+  // const [searchId, setSearchId] = useState<string | null>(null);
+
+  const tokenDecimals = 18;
 
   // Step 1: Deploy VanityContractDeployer with token bytecode
   async function deployVanityDeployer() {
     setIsProcessing(true);
-    setError(null);
     setErrorMessage("");
 
     if (!window.ethereum) {
@@ -256,10 +252,10 @@ export default function VanityFinderPage() {
       setCurrentStep(1);
       setIsProcessing(false);
       
-    } catch (error: any) {
+    } catch (error: Error | unknown) {
       console.error("Error deploying VanityContractDeployer:", error);
       setIsError(true);
-      setErrorMessage(error.message || "Failed to deploy VanityContractDeployer");
+      setErrorMessage(error instanceof Error ? error.message : "Failed to deploy VanityContractDeployer");
       setIsProcessing(false);
     }
   }
@@ -267,7 +263,6 @@ export default function VanityFinderPage() {
   // Step 2: Find a salt value that will generate a contract address with the desired suffix
   async function findSalt() {
     setIsSearching(true);
-    setError(null);
     setErrorMessage("");
     
     try {
@@ -300,7 +295,7 @@ export default function VanityFinderPage() {
 
       const data = await response.json();
       console.log("Search started:", data);
-      setSearchId(data.searchId);
+      // setSearchId(data.searchId);
       
       // Poll for results
       const pollInterval = setInterval(async () => {
@@ -332,14 +327,12 @@ export default function VanityFinderPage() {
               // Move to the next step
               setCurrentStep(2);
             } else {
-              setError(new Error(pollData.message || 'Search completed without finding a matching salt'));
               setErrorMessage(pollData.message || 'Search completed without finding a matching salt');
               setIsError(true);
             }
           } else if (pollData.status === 'error' || pollData.status === 'timeout') {
             clearInterval(pollInterval);
             setIsSearching(false);
-            setError(new Error(pollData.message || 'Search failed'));
             setErrorMessage(pollData.message || 'Search failed');
             setIsError(true);
           }
@@ -349,18 +342,17 @@ export default function VanityFinderPage() {
         }
       }, 2000); // Poll every 2 seconds
       
-    } catch (error: any) {
+    } catch (error: Error | unknown) {
       console.error("Error starting salt search:", error);
       setIsSearching(false);
       setIsError(true);
-      setErrorMessage(error.message || "Failed to start salt search");
+      setErrorMessage(error instanceof Error ? error.message : "Failed to start salt search");
     }
   }
   
   // Step 3: Deploy the token contract using the found salt
   async function deployContract() {
     setIsProcessing(true);
-    setError(null);
     setErrorMessage("");
 
     const storedSalt = localStorage.getItem('salt');
@@ -426,7 +418,7 @@ export default function VanityFinderPage() {
         console.log("Transaction receipt:", receipt);
         
         // Find the deployment event
-        const deployedEvent = receipt.events?.find((e: any) => {
+        const deployedEvent = receipt.events?.find((e: { event: string }) => {
           return e.event === "TargetContractDeployed";
         });
         
@@ -439,7 +431,6 @@ export default function VanityFinderPage() {
           }
           
           // Extract address from data
-          const data = eventByTopic;
           const deployedTokenAddress = eventByTopic.address;
 
           console.log("\n✅ SUCCESS! Token deployed with vanity address:");
@@ -447,7 +438,7 @@ export default function VanityFinderPage() {
           
           // Update state with the deployed token address
           setTokenAddress(deployedTokenAddress.toLowerCase());
-          setDeployerAddress(address);
+          // setDeployerAddress(address);
           setIsSuccess(true);
         } else {
           // Extract address from event args
@@ -458,7 +449,7 @@ export default function VanityFinderPage() {
           
           // Update state with the deployed token address
           setTokenAddress(deployedTokenAddress.toLowerCase());
-          setDeployerAddress(address);
+          // setDeployerAddress(address);
           setIsSuccess(true);
         }
         
@@ -490,7 +481,7 @@ export default function VanityFinderPage() {
             // Successfully read token details
             break;
           } catch (error) {
-            console.log(`Attempt ${attempts + 1}/${maxAttempts} to read token details failed. Retrying...`);
+            console.log(`Attempt ${attempts + 1}/${maxAttempts} to read token details failed. Retrying... due to ${error}`);
             attempts++;
             
             if (attempts >= maxAttempts) {
@@ -516,13 +507,13 @@ export default function VanityFinderPage() {
         const receipt = await tx.wait();
         
         // Find the deployment event
-        const deployedEvent = receipt.events?.find((e: any) => {
+        const deployedEvent = receipt.events?.find((e: { event: string }) => {
           return e.event === "TargetContractDeployed";
         });
         
         if (!deployedEvent) {
           // Try to find by topic if event name isn't available
-          const eventByTopic = receipt.events?.find((e: any) => {
+          const eventByTopic = receipt.events?.find((e: { topics?: string[] }) => {
             return e.topics && e.topics[0] === "0x5c2cf7b115a5d943fa11d730c947a439f2895d25576349163d4c5e7d3c3f2abc";
           });
           
@@ -538,7 +529,7 @@ export default function VanityFinderPage() {
           console.log(`   ${deployedTokenAddress}`);
           
           setTokenAddress(deployedTokenAddress);
-          setDeployerAddress(address);
+     //     setDeployerAddress(address);
           setIsSuccess(true);
         } else {
           // Extract address from event args
@@ -548,15 +539,15 @@ export default function VanityFinderPage() {
           console.log(`   ${deployedTokenAddress}`);
           
           setTokenAddress(deployedTokenAddress);
-          setDeployerAddress(address);
+      //    setDeployerAddress(address);
           setIsSuccess(true);
         }
       }
       
-    } catch (error: any) {
+    } catch (error: Error | unknown) {
       console.error("Error deploying contract:", error);
       setIsError(true);
-      setErrorMessage(error.message || "Failed to deploy contract");
+      setErrorMessage(error instanceof Error ? error.message : "Failed to deploy contract");
     } finally {
       setIsProcessing(false);
     }
@@ -625,7 +616,6 @@ export default function VanityFinderPage() {
                   <Button
                     onClick={() => {
                       setIsError(false);
-                      setError(null);
                       setErrorMessage("");
                     }}
                     className="bg-[#10ad71] hover:bg-[#0d8a5a] text-white"

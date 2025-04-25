@@ -1,5 +1,4 @@
 import { Worker } from 'worker_threads';
-import { ethers } from 'ethers';
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
@@ -86,7 +85,7 @@ export async function GET(request) {
         return NextResponse.json(result);
       } catch (err) {
         return NextResponse.json(
-          { error: 'Failed to read search result' },
+          { error: 'Failed to read search result', err },
           { status: 500 }
         );
       }
@@ -210,10 +209,9 @@ Using ${numCPUs} CPU cores for search
   let activeWorkers = 0;
   
   // For progress reporting
-  const startTime = Date.now();
-  let totalChecked = 0;
+  // let totalChecked = 0;
   
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve) => {
     // Function to save the result
     function saveResult(result) {
       const resultPath = path.join(resultsDir, `${searchId}.json`);
@@ -259,7 +257,7 @@ Using ${numCPUs} CPU cores for search
       worker.on('message', (message) => {
         if (message.type === 'progress') {
           // Worker is reporting progress
-          totalChecked += message.count;
+          // totalChecked += message.count;
           console.log(`Worker ${message.id}: Checked ${message.count} salts at ${message.rate}/sec`);
         } else if (message.type === 'complete') {
           // Worker finished its batch without finding a match
@@ -367,89 +365,89 @@ Using ${numCPUs} CPU cores for search
   });
 }
 
-// Helper function to create a deployment script
-function createDeploymentScript(contractInfo, salt, tokenName, tokenSymbol, tokenDecimals, tokenSupply, targetSuffix) {
-  const deployScript = `
-  // deploy-${tokenSymbol.toLowerCase()}-${targetSuffix}.js
-  const { ethers } = require("hardhat");
+// // Helper function to create a deployment script
+// function createDeploymentScript(contractInfo, salt, tokenName, tokenSymbol, tokenDecimals, tokenSupply, targetSuffix) {
+//   const deployScript = `
+//   // deploy-${tokenSymbol.toLowerCase()}-${targetSuffix}.js
+//   const { ethers } = require("hardhat");
   
-  async function main() {
-    const [deployer] = await ethers.getSigners();
-    console.log("Deploying with account:", deployer.address);
+//   async function main() {
+//     const [deployer] = await ethers.getSigners();
+//     console.log("Deploying with account:", deployer.address);
     
-    // Connect to the VanityContractDeployer for this specific token
-    const vanityDeployer = await ethers.getContractAt(
-      "VanityContractDeployer", 
-      "${contractInfo.vanityDeployerAddress}"
-    );
+//     // Connect to the VanityContractDeployer for this specific token
+//     const vanityDeployer = await ethers.getContractAt(
+//       "VanityContractDeployer", 
+//       "${contractInfo.vanityDeployerAddress}"
+//     );
     
-    // Deploy with the found salt
-    console.log("\\nDeploying token with salt: ${salt}");
-    console.log("- Name: ${tokenName}");
-    console.log("- Symbol: ${tokenSymbol}");
-    console.log("- Decimals: ${tokenDecimals}");
-    console.log("- Supply: ${tokenSupply}");
+//     // Deploy with the found salt
+//     console.log("\\nDeploying token with salt: ${salt}");
+//     console.log("- Name: ${tokenName}");
+//     console.log("- Symbol: ${tokenSymbol}");
+//     console.log("- Decimals: ${tokenDecimals}");
+//     console.log("- Supply: ${tokenSupply}");
     
-    const tx = await vanityDeployer.deployWithSalt(${salt});
-    console.log("Transaction hash:", tx.hash);
-    console.log("Waiting for transaction confirmation...");
-    const receipt = await tx.wait();
+//     const tx = await vanityDeployer.deployWithSalt(${salt});
+//     console.log("Transaction hash:", tx.hash);
+//     console.log("Waiting for transaction confirmation...");
+//     const receipt = await tx.wait();
     
-    // Get the deployed token address from the event
-    const deployedEvent = receipt.events.find(e => e.event === "TargetContractDeployed");
-    const tokenAddress = deployedEvent.args.deployedAddress;
+//     // Get the deployed token address from the event
+//     const deployedEvent = receipt.events.find(e => e.event === "TargetContractDeployed");
+//     const tokenAddress = deployedEvent.args.deployedAddress;
     
-    console.log("\\n✅ SUCCESS! Token deployed with address:");
-    console.log(\`   \${tokenAddress}\`);
+//     console.log("\\n✅ SUCCESS! Token deployed with address:");
+//     console.log(\`   \${tokenAddress}\`);
     
-    // Verify the address ends with our target suffix
-    if (tokenAddress.toLowerCase().endsWith("${targetSuffix}")) {
-      console.log("✅ Address correctly ends with: ${targetSuffix}");
-    } else {
-      console.log("❌ WARNING: Address does NOT end with: ${targetSuffix}");
-      console.log("   This suggests an inconsistency in the CREATE2 implementation.");
-    }
+//     // Verify the address ends with our target suffix
+//     if (tokenAddress.toLowerCase().endsWith("${targetSuffix}")) {
+//       console.log("✅ Address correctly ends with: ${targetSuffix}");
+//     } else {
+//       console.log("❌ WARNING: Address does NOT end with: ${targetSuffix}");
+//       console.log("   This suggests an inconsistency in the CREATE2 implementation.");
+//     }
     
-    // Connect to the deployed token
-    const WinkToken = await ethers.getContractFactory("WinkToken");
-    const winkToken = await WinkToken.attach(tokenAddress);
+//     // Connect to the deployed token
+//     const WinkToken = await ethers.getContractFactory("WinkToken");
+//     const winkToken = await WinkToken.attach(tokenAddress);
     
-    // Verify token details
-    const name = await winkToken.name();
-    const symbol = await winkToken.symbol();
-    const decimals = await winkToken.decimals();
-    const totalSupply = await winkToken.totalSupply();
-    const ownerBalance = await winkToken.balanceOf(deployer.address);
+//     // Verify token details
+//     const name = await winkToken.name();
+//     const symbol = await winkToken.symbol();
+//     const decimals = await winkToken.decimals();
+//     const totalSupply = await winkToken.totalSupply();
+//     const ownerBalance = await winkToken.balanceOf(deployer.address);
     
-    console.log("\\nToken Details:");
-    console.log(\`- Name: \${name}\`);
-    console.log(\`- Symbol: \${symbol}\`);
-    console.log(\`- Decimals: \${decimals}\`);
-    console.log(\`- Total Supply: \${ethers.utils.formatUnits(totalSupply, decimals)}\`);
-    console.log(\`- Owner Balance: \${ethers.utils.formatUnits(ownerBalance, decimals)}\`);
+//     console.log("\\nToken Details:");
+//     console.log(\`- Name: \${name}\`);
+//     console.log(\`- Symbol: \${symbol}\`);
+//     console.log(\`- Decimals: \${decimals}\`);
+//     console.log(\`- Total Supply: \${ethers.utils.formatUnits(totalSupply, decimals)}\`);
+//     console.log(\`- Owner Balance: \${ethers.utils.formatUnits(ownerBalance, decimals)}\`);
     
-    console.log("\\nExplorer Link:");
-    console.log(\`https://sepolia.basescan.org/address/\${tokenAddress}\`);
-  }
+//     console.log("\\nExplorer Link:");
+//     console.log(\`https://sepolia.basescan.org/address/\${tokenAddress}\`);
+//   }
   
-  main()
-    .then(() => process.exit(0))
-    .catch(error => {
-      console.error(error);
-      process.exit(1);
-    });
-  `;
+//   main()
+//     .then(() => process.exit(0))
+//     .catch(error => {
+//       console.error(error);
+//       process.exit(1);
+//     });
+//   `;
   
-  try {
-    const scriptsDir = path.join(process.cwd(), "scripts");
-    if (!fs.existsSync(scriptsDir)) {
-      fs.mkdirSync(scriptsDir, { recursive: true });
-    }
+//   try {
+//     const scriptsDir = path.join(process.cwd(), "scripts");
+//     if (!fs.existsSync(scriptsDir)) {
+//       fs.mkdirSync(scriptsDir, { recursive: true });
+//     }
     
-    const scriptPath = path.join(scriptsDir, `deploy-${tokenSymbol.toLowerCase()}-${targetSuffix}.js`);
-    fs.writeFileSync(scriptPath, deployScript);
-    console.log(`\nCreated deployment script: ${scriptPath}`);
-  } catch (err) {
-    console.error("Error creating deployment script:", err);
-  }
-} 
+//     const scriptPath = path.join(scriptsDir, `deploy-${tokenSymbol.toLowerCase()}-${targetSuffix}.js`);
+//     fs.writeFileSync(scriptPath, deployScript);
+//     console.log(`\nCreated deployment script: ${scriptPath}`);
+//   } catch (err) {
+//     console.error("Error creating deployment script:", err);
+//   }
+// } 

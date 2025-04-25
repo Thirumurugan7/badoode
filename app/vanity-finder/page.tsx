@@ -1,15 +1,12 @@
 'use client';
 
-import { Rocket, CheckCircle2, ArrowRight, XCircle, Loader2 } from "lucide-react";
+import {  Loader2 } from "lucide-react";
 import { Card } from '@/components/ui/card';
 import { Button } from "@/components/ui/button";
-import { motion } from "framer-motion";
-import { useAccount, usePublicClient, useWriteContract } from "wagmi";
-import { sepolia } from "wagmi/chains";
-import { parseEther } from "viem";
+import { useAccount } from "wagmi";
+
 import { useState, useEffect } from "react";
-import { Input } from "@/components/ui/input";
-import ContractABI from "@/app/vanity.json";
+
 
 type SearchResult = {
   success: boolean;
@@ -18,19 +15,21 @@ type SearchResult = {
 };
 
 export default function VanityFinderPage() {
-  const [currentStep, setCurrentStep] = useState(0);
-  const [tokenName, setTokenName] = useState("");
-  const [tokenSymbol, setTokenSymbol] = useState("");
-  const [contractSuffix, setContractSuffix] = useState<string>("");
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [isSuccess, setIsSuccess] = useState(false);
-  const [suggestion, setSuggestion] = useState<string[]>([]);
-  const [txnHash, setTxnHash] = useState("");
-  const [tokenAddress, setTokenAddress] = useState("");
-  const [startSalt, setStartSalt] = useState<string>("");
-  const [batchSize, setBatchSize] = useState<number>(1000);
+
+  // const [contractSuffix, setContractSuffix] = useState<string>("");
+
+  const contractSuffix = "";
+
+  // const [startSalt, setStartSalt] = useState<string>("");
+
+  const startSalt = "";
+
+  // const [batchSize, setBatchSize] = useState<number>(1000);
+
+  const batchSize = 1000;
+
   const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [result, setResult] = useState<SearchResult>({ success: false });
+  // const [result, setResult] = useState<SearchResult>({ success: false });
   const [error, setError] = useState<string | null>(null);
   const [progress, setProgress] = useState<{ searched: number; currentBatch: number }>({
     searched: 0,
@@ -38,9 +37,7 @@ export default function VanityFinderPage() {
   });
   const [buttonText, setButtonText] = useState("Connect Wallet");
 
-  const { address, isConnected } = useAccount();
-  const publicClient = usePublicClient({ chainId: sepolia.id });
-  const { writeContractAsync } = useWriteContract();
+  const {  isConnected } = useAccount();
 
   useEffect(() => {
     setButtonText(isConnected ? "Find Vanity Address" : "Connect Wallet");
@@ -76,6 +73,8 @@ export default function VanityFinderPage() {
         currentBatch: prev.currentBatch + 1
       }));
       
+      console.log("progress", progress);
+      
       return data;
     } catch (err) {
       console.error('Error searching batch:', err);
@@ -85,12 +84,17 @@ export default function VanityFinderPage() {
 
   const handleNextStep = async () => {
     if (!isConnected) return;
+
+    
+    console.log("Searching for address...");
+    console.log("error", error);
     
     setIsLoading(true);
     setError(null);
     try {
       const result = await searchBatch(parseInt(startSalt), batchSize, contractSuffix);
-      setResult(result);
+      console.log("result", result);
+      // setResult(result);
     } catch (error) {
       setError(error instanceof Error ? error.message : 'An error occurred');
     } finally {

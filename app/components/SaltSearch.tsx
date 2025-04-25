@@ -21,6 +21,8 @@ export default function SaltSearch({ onSaltFound }: SaltSearchProps) {
   // Poll for search status when searchId is available
   useEffect(() => {
     if (!searchId || !isSearching) return;
+    console.log("progress", progress);
+    
 
     const interval = setInterval(async () => {
       try {
