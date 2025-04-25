@@ -1026,8 +1026,15 @@ console.log("executing deploycontract")
                         onClick={handleDeploy}
                         disabled={!tokenName || !tokenSymbol || !tokenSupply || isProcessing}
                         className="w-full bg-[#10ad71] hover:bg-[#0d8a5a] text-white"
-                      >
-                        Deploy Token
+                      > 
+                      { isProcessing ? (
+                        <div className="flex items-center justify-center gap-2">
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          <span>Deploying Token...</span>
+                        </div>
+                      ) : (
+                        "Deploy Token"
+                      )}
                       </Button>
                   </motion.div>
                 )}
