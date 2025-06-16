@@ -31,19 +31,18 @@ const CreateWallet = () => {
   const handleSuffixChange = (value: string) => {
     setContractSuffix(value);
 
-    if (!isHexadecimal(value)) {
-      const fallbackSuggestions = generateFallbackSuggestions(value, 4); // Generate 4 suggestions
-      setSuggestion(fallbackSuggestions);
-    } else {
-      setSuggestion([]); // Clear suggestions for valid input
-    }
+    // Generate suggestions regardless of input validity
+    const suggestions = generateSuggestions(value, 4); // Generate 4 suggestions
+    setSuggestion(suggestions);
   };
 
-  const generateFallbackSuggestions = (input: string, count: number = 3) => {
+  const generateSuggestions = (input: string, count: number = 3) => {
     const hexChars = "0123456789abcdef";
+    const suggestions = [];
 
-    const generateSingleSuggestion = () =>
-      input
+    // Generate some valid hexadecimal suggestions
+    for (let i = 0; i < count / 2; i++) {
+      const validSuggestion = input
         .split("")
         .map((char) =>
           hexChars.includes(char.toLowerCase())
@@ -52,8 +51,24 @@ const CreateWallet = () => {
         )
         .join("")
         .toLowerCase();
+      suggestions.push(validSuggestion);
+    }
 
-    return Array.from({ length: count }, generateSingleSuggestion);
+    // Generate some invalid suggestions (with non-hex characters)
+    for (let i = 0; i < count / 2; i++) {
+      const invalidSuggestion = input
+        .split("")
+        .map((char) =>
+          Math.random() > 0.5
+            ? char
+            : String.fromCharCode(97 + Math.floor(Math.random() * 26)) // Random letter
+        )
+        .join("")
+        .toLowerCase();
+      suggestions.push(invalidSuggestion);
+    }
+
+    return suggestions;
   };
 
   const { writeContractAsync } = useWriteContract();
@@ -271,15 +286,17 @@ const CreateWallet = () => {
                       className="bg-white border-gray-300 text-gray-900 w-full focus:border-[#10ad71] focus:ring-[#10ad71]"
                     />
 
-                    {contractSuffix && !isHexadecimal(contractSuffix) && (
+                    {contractSuffix && (
                       <div className="absolute z-10 mt-1 w-full rounded-md bg-white border border-gray-200 shadow-lg">
                         <div className="p-2 space-y-2">
-                          <div className="flex items-center justify-between px-2 py-1 text-red-500">
-                            <span className="font-mono">
-                              {contractSuffix}
-                            </span>
-                            <span className="text-sm">Not available</span>
-                          </div>
+                          {!isHexadecimal(contractSuffix) && (
+                            <div className="flex items-center justify-between px-2 py-1 text-red-500">
+                              <span className="font-mono">
+                                {contractSuffix}
+                              </span>
+                              <span className="text-sm">Not available</span>
+                            </div>
+                          )}
 
                           <div className="space-y-1">
                             {suggestion.map((suggestion, index) => (
@@ -293,8 +310,8 @@ const CreateWallet = () => {
                                 <span className="font-mono text-gray-900">
                                   {suggestion}
                                 </span>
-                                <span className="ml-2 text-xs text-[#10ad71]">
-                                  Available
+                                <span className={`ml-2 text-xs ${isHexadecimal(suggestion) ? 'text-[#10ad71]' : 'text-red-500'}`}>
+                                  {isHexadecimal(suggestion) ? 'Available' : 'Not available'}
                                 </span>
                               </div>
                             ))}
@@ -305,7 +322,7 @@ const CreateWallet = () => {
 
                     <p className="mt-1 text-xs text-gray-500">
                       This will be appended to your wallet address for
-                      easy identification
+                      easy identification (0-9, a-f)
                     </p>
                   </div>
 
