@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
-import { Rocket, CheckCircle2, ArrowRight, XCircle, Loader2, Wallet } from "lucide-react";
+import {  CheckCircle2,  XCircle,  Wallet } from "lucide-react";
 import { motion } from "framer-motion";
 import { useAccount, usePublicClient, useWriteContract } from "wagmi";
 import { sepolia } from "wagmi/chains";
@@ -31,29 +31,72 @@ const CreateWallet = () => {
   const handleSuffixChange = (value: string) => {
     setContractSuffix(value);
 
-    if (!isHexadecimal(value)) {
-      const fallbackSuggestions = generateFallbackSuggestions(value, 4); // Generate 4 suggestions
-      setSuggestion(fallbackSuggestions);
-    } else {
-      setSuggestion([]); // Clear suggestions for valid input
-    }
+    // Generate suggestions for both valid and invalid inputs
+    const suggestions = generateSuggestions(value, 4);
+    setSuggestion(suggestions);
   };
 
-  const generateFallbackSuggestions = (input: string, count: number = 3) => {
+  const generateSuggestions = (input: string, count: number = 3) => {
     const hexChars = "0123456789abcdef";
+    const suggestions = [];
 
-    const generateSingleSuggestion = () =>
-      input
-        .split("")
-        .map((char) =>
-          hexChars.includes(char.toLowerCase())
-            ? char
-            : hexChars[Math.floor(Math.random() * 16)]
-        )
-        .join("")
-        .toLowerCase();
+    if (isHexadecimal(input)) {
+      // For valid hex input, generate related suggestions
+      // 1. Keep the same length but vary some characters
+      for (let i = 0; i < count / 2; i++) {
+        const chars = input.split('');
+        // Randomly change 1-2 characters
+        const numChanges = Math.floor(Math.random() * 2) + 1;
+        for (let j = 0; j < numChanges; j++) {
+          const pos = Math.floor(Math.random() * chars.length);
+          chars[pos] = hexChars[Math.floor(Math.random() * 16)];
+        }
+        suggestions.push(chars.join(''));
+      }
 
-    return Array.from({ length: count }, generateSingleSuggestion);
+      // 2. Generate some invalid but similar suggestions
+      for (let i = 0; i < count / 2; i++) {
+        const chars = input.split('');
+        // Replace 1-2 characters with non-hex characters
+        const numChanges = Math.floor(Math.random() * 2) + 1;
+        for (let j = 0; j < numChanges; j++) {
+          const pos = Math.floor(Math.random() * chars.length);
+          chars[pos] = String.fromCharCode(97 + Math.floor(Math.random() * 26)); // Random letter
+        }
+        suggestions.push(chars.join(''));
+      }
+    } else {
+      // For invalid input, generate both valid and invalid suggestions
+      // 1. Generate valid hex suggestions
+      for (let i = 0; i < count / 2; i++) {
+        const validSuggestion = input
+          .split("")
+          .map((char) =>
+            hexChars.includes(char.toLowerCase())
+              ? char
+              : hexChars[Math.floor(Math.random() * 16)]
+          )
+          .join("")
+          .toLowerCase();
+        suggestions.push(validSuggestion);
+      }
+
+      // 2. Generate invalid suggestions
+      for (let i = 0; i < count / 2; i++) {
+        const invalidSuggestion = input
+          .split("")
+          .map((char) =>
+            Math.random() > 0.5
+              ? char
+              : String.fromCharCode(97 + Math.floor(Math.random() * 26)) // Random letter
+          )
+          .join("")
+          .toLowerCase();
+        suggestions.push(invalidSuggestion);
+      }
+    }
+
+    return suggestions;
   };
 
   const { writeContractAsync } = useWriteContract();
@@ -90,8 +133,6 @@ const CreateWallet = () => {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
 
-      setIsProcessing(false);
-
         setIsSuccess(true);
         const data = await response.json();
         console.log("Wallet generation successful:", data);
@@ -101,7 +142,6 @@ const CreateWallet = () => {
       } catch (error) {
         console.error("Error generating wallet:", error);
         setIsError(true);
-        setIsProcessing(false);
         setErrorMessage(error instanceof Error ? error.message : "Unknown error occurred");
       }
     } catch (error) {
@@ -274,15 +314,17 @@ const CreateWallet = () => {
                       className="bg-white border-gray-300 text-gray-900 w-full focus:border-[#10ad71] focus:ring-[#10ad71]"
                     />
 
-                    {contractSuffix && !isHexadecimal(contractSuffix) && (
+                    {contractSuffix && (
                       <div className="absolute z-10 mt-1 w-full rounded-md bg-white border border-gray-200 shadow-lg">
                         <div className="p-2 space-y-2">
-                          <div className="flex items-center justify-between px-2 py-1 text-red-500">
-                            <span className="font-mono">
-                              {contractSuffix}
-                            </span>
-                            <span className="text-sm">Not available</span>
-                          </div>
+                          {!isHexadecimal(contractSuffix) && (
+                            <div className="flex items-center justify-between px-2 py-1 text-red-500">
+                              <span className="font-mono">
+                                {contractSuffix}
+                              </span>
+                              <span className="text-sm">Not available</span>
+                            </div>
+                          )}
 
                           <div className="space-y-1">
                             {suggestion.map((suggestion, index) => (
@@ -296,8 +338,8 @@ const CreateWallet = () => {
                                 <span className="font-mono text-gray-900">
                                   {suggestion}
                                 </span>
-                                <span className="ml-2 text-xs text-[#10ad71]">
-                                  Available
+                                <span className={`ml-2 text-xs ${isHexadecimal(suggestion) ? 'text-[#10ad71]' : 'text-red-500'}`}>
+                                  {isHexadecimal(suggestion) ? 'Available' : 'Not available'}
                                 </span>
                               </div>
                             ))}
@@ -352,7 +394,7 @@ const CreateWallet = () => {
                       Processing Transaction
                     </h3>
                     <p className="text-gray-600">
-                      Please wait while we create your wallet, this might take upto 15 minutes
+                      Please wait while we create your wallet, this might take upto 2 minutes
                     </p>
                   </div>
                 </div>
