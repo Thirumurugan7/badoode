@@ -308,7 +308,7 @@ const CreateWallet = () => {
 
                     <p className="mt-1 text-xs text-gray-500">
                       This will be appended to your wallet address for
-                      easy identification
+                      easy identification (0-9, a-f)
                     </p>
                   </div>
 
