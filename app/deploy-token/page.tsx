@@ -183,12 +183,12 @@ export default function VanityFinderPage() {
     try {
       // Step 1: Deploy VanityContractDeployer
       setCurrentOperation("Deploying VanityContractDeployer...");
-      const deploySuccess = await deployVanityDeployer();
+       await deployVanityDeployer();
       // if (!deploySuccess) return;
 
       // Step 2: Find Salt
       setCurrentOperation("Searching for vanity address...");
-      const saltFound = await findSalt();
+      await findSalt();
       // if (!saltFound) return;
 
       // Step 3: Deploy Contract
@@ -400,6 +400,7 @@ export default function VanityFinderPage() {
                 address: pollData.address,
                 deployerAddress: pollData.deployerAddress
               });
+              console.log("searchResult", searchResult);
               
               // Move to the next step
               // setCurrentStep(2);
